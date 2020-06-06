@@ -1,13 +1,19 @@
 package ru.shemplo.cave.app.entity.level;
 
 import java.util.ArrayList;
+import java.util.HashSet;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.Set;
+import java.util.function.BiConsumer;
 
+import javafx.geometry.Point3D;
 import javafx.scene.image.Image;
 import javafx.scene.paint.Color;
 import lombok.Getter;
 import ru.shemplo.cave.experimental.MazeGenerator;
+import ru.shemplo.snowball.stuctures.Pair;
 
 public class Level {
     
@@ -82,87 +88,89 @@ public class Level {
         return true;
     }
     
+    private final List <Pair <Integer, Integer>> directions = List.of (
+        Pair.mp (0, 1), Pair.mp (0, -1), Pair.mp (1, 0), Pair.mp (-1, 0)
+    );
+    
+    private final Queue <Point3D> queue = new LinkedList <> ();
+    private final Set <Point3D> visited = new HashSet <> ();
+    
+    private void runBFS (int fromX, int fromY, double maxDistance, BiConsumer <Point3D, Point3D> cellVisitor) {
+        queue.clear (); visited.clear ();
+        
+        final var fromPoint = new Point3D (fromX, fromY, 0);
+        visited.add (fromPoint);
+        queue.add (fromPoint);
+        
+        final var start = System.currentTimeMillis ();
+        while (!queue.isEmpty ()) {
+            final var point = queue.poll ();
+            
+            directions.forEach (offset -> {
+                if (point.getZ () + 1 > maxDistance) { return; }
+                
+                final int cx = (int) point.getX ();
+                final int cy = (int) point.getY ();
+                final int x = cx + offset.F;
+                final int y = cy + offset.S;
+                
+                if (!canStepOn (x, y)) { return; }
+                
+                final var toPoint = new Point3D (x, y, point.getZ () + 1);
+                if (visited.contains (toPoint)) { return; }
+                
+                visited.add (toPoint);
+                queue.add (toPoint);
+                
+                cellVisitor.accept (point, toPoint);
+            });
+        }
+        
+        final var end = System.currentTimeMillis ();
+        if (end - start > 0) {            
+            System.out.println ("BFS Duration: " + (end - start)); // SYSOUT
+        }
+    }
+    
     public List <RenderCell> getVisibleCells (int x, int y, double illumination) {
         final var list = new ArrayList <RenderCell> ();
-        list.add (getCellSafe (x - 1, y - 1, -1, -1));
-        list.add (getCellSafe (x,     y - 1, 0, -1));
-        list.add (getCellSafe (x + 1, y - 1, 1, -1));
-        list.add (getCellSafe (x - 1, y, -1, 0));
-        list.add (getCellSafe (x,     y, 0, 0));
-        list.add (getCellSafe (x + 1, y, 1, 0));    
-        list.add (getCellSafe (x - 1, y + 1, -1, 1));
-        list.add (getCellSafe (x,     y + 1, 0, 1));
-        list.add (getCellSafe (x + 1, y + 1, 1, 1));
         
-        if (horizontalOpen.contains (getTypeSafe (x - 1, y))) {
-            list.add (getCellSafe (x - 2, y, -2, 0));
-        }
-        if (horizontalOpen.contains (getTypeSafe (x + 1, y))) {
-            list.add (getCellSafe (x + 2, y, 2, 0));
-        }
-        if (verticalOpen.contains (getTypeSafe (x, y - 1))) {
-            list.add (getCellSafe (x, y - 2, 0, -2));
-        }
-        if (verticalOpen.contains (getTypeSafe (x, y + 1))) {
-            list.add (getCellSafe (x, y + 2, 0, 2));
-        }
+        runBFS (x, y, 2.0, (__, point) -> {
+            final int px = (int) point.getX ();
+            final int py = (int) point.getY ();
+            list.add (getCellSafe (px, py, px - x, py - y));            
+        });
         
         return list;
     }
     
     public List <RenderGate> getVisibleGates (int x, int y) {
         final var gs = new ArrayList <RenderGate> ();
+        final var maxDistance = 3.0;
         
-        if (gates [y][2 * x] > 0) {
-            gs.add (RenderGate.builder ().x (0).y (0.5).build ());
-        }
-        
-        if (y < map.length - 1 && gates [y + 1][2 * x] > 0) {
-            gs.add (RenderGate.builder ().x (0).y (1.5).build ());
-        }
-        
-        if (y < map.length - 2 && gates [y + 2][2 * x] > 0 && map [y - 1][x] > 0) {
-            gs.add (RenderGate.builder ().x (0).y (2.5).build ());
-        }
-        
-        
-        if (gates [y][2 * x + 1] > 0) {
-            gs.add (RenderGate.builder ().x (0.5).y (0).vertical (true).build ());
-        }
-        
-        if (x < map [x].length - 1 && gates [y][2 * (x + 1) + 1] > 0) {
-            gs.add (RenderGate.builder ().x (1.5).y (0).vertical (true).build ());
-        }
-        
-        if (x < map [x].length - 2 && gates [y][2 * (x + 2) + 1] > 0 && map [y][x + 1] > 0) {
-            gs.add (RenderGate.builder ().x (2.5).y (0).vertical (true).build ());
-        }
-        
-        
-        if (x > 0 && gates [y][2 * x - 1] > 0) {
-            gs.add (RenderGate.builder ().x (-0.5).y (0).vertical (true).build ());    
-        }
-        
-        if (x > 1 && gates [y][2 * (x - 1) - 1] > 0) {
-            gs.add (RenderGate.builder ().x (-1.5).y (0).vertical (true).build ());
-        }
-        
-        if (x > 2 && gates [y][2 * (x - 2) - 1] > 0 && map [y][x - 1] > 0) {
-            gs.add (RenderGate.builder ().x (-2.5).y (0).vertical (true).build ());
-        }
-        
-        
-        if (y > 0 && gates [y - 1][2 * x] > 0) {
-            gs.add (RenderGate.builder ().x (0).y (-0.5).build ());
-        }
-        
-        if (y > 1 && gates [y - 2][2 * x] > 0) {
-            gs.add (RenderGate.builder ().x (0).y (-1.5).build ());
-        }
-        
-        if (y > 2 && gates [y - 3][2 * x] > 0 && map [y - 1][x] > 0) {
-            gs.add (RenderGate.builder ().x (0).y (-2.5).build ());
-        }
+        runBFS (x, y, maxDistance, (from, point) -> {
+            final int px = (int) point.getX ();
+            final int py = (int) point.getY ();
+            
+            if (point.getZ () > maxDistance - 1) {
+                final var dx = (int) (px - from.getX ());
+                final var dy = (int) (py - from.getY ());
+                
+                if (dy < 0 && dx == 0 && gates [py][px * 2] > 0) {
+                    gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).build ());
+                } else if (dx < 0 && dy == 0 && gates [py][px * 2 + 1] > 0) {
+                    gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).build ());
+                }
+            } else {                
+                if (gates [py][px * 2] > 0) {                
+                    gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).build ());            
+                }
+                if (gates [py][px * 2 + 1] > 0) {                
+                    gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).build ());            
+                }
+            }
+            
+        });
         
         return gs;
     }
@@ -205,14 +213,12 @@ public class Level {
         tunnel_rb // 16
     );
     
+    @SuppressWarnings ("unused")
     private Set <Integer> horizontalOpen = Set.of (3, 5, 6, 9);
+    @SuppressWarnings ("unused")
     private Set <Integer> verticalOpen = Set.of (6, 7, 10, 11);
     
-    static {
-        //grass1 = new WritableImage (tilesSet.getPixelReader (), 0, 0, 8, 8);
-        //stone1= new WritableImage (tilesSet.getPixelReader (), 8, 24, 8, 8);
-    }
-    
+    @SuppressWarnings ("unused")
     private int getTypeSafe (int x, int y) {
         if (y < 0 || y >= map.length || x < 0 || x >= map [y].length) {
             return 0;
@@ -226,10 +232,10 @@ public class Level {
             return RenderCell.builder ().x (rx).y (ry).image (tunnel_0).effect (Color.BLACK).build ();
         }
         
-        final var distance = Math.sqrt (rx * rx + ry * ry);
+        //final var distance = Math.sqrt (rx * rx + ry * ry);
         return RenderCell.builder ().x (rx).y (ry)
              . image (tunnels.get (map [y][x]))
-             . effect (Color.gray (0.025, 1.0 / (3 - (distance == 0 ? 1 : distance))))
+             . effect (Color.gray (0.025, 1.0))
              . build ();
     }
     
