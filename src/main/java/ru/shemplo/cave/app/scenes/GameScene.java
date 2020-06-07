@@ -72,16 +72,16 @@ public class GameScene extends AbstractScene {
         app.getStage ().getScene ().setOnKeyPressed (ke -> {
             switch (ke.getCode ()) {
                 case W: {
-                    if (level.canStepOnFrom (mx, my - 1, mx, my)) { my -= 1; }
+                    if (level.canStepOnFrom (0, -1, mx, my)) { my -= 1; }
                 } break;
                 case A: {
-                    if (level.canStepOnFrom (mx - 1, my, mx, my)) { mx -= 1; }
+                    if (level.canStepOnFrom (-1, 0, mx, my)) { mx -= 1; }
                 } break;
                 case S: {
-                    if (level.canStepOnFrom (mx, my + 1, mx, my)) { my += 1; }
+                    if (level.canStepOnFrom (0, +1, mx, my)) { my += 1; }
                 } break;
                 case D: {
-                    if (level.canStepOnFrom (mx + 1, my, mx, my)) { mx += 1; }
+                    if (level.canStepOnFrom (+1, 0, mx, my)) { mx += 1; }
                 } break;
                 
                 default: break;
@@ -97,7 +97,7 @@ public class GameScene extends AbstractScene {
         new KeyFrame (Duration.millis (1000.0 / 10.0))
     );
     
-    private final double ts = 32 * 4; // tile size 
+    private final double ts = 32 * 6; // tile size 
     
     // 132 x 326
     
@@ -121,24 +121,18 @@ public class GameScene extends AbstractScene {
         
         level.getVisibleCells (px, py, 1.0).forEach (cell -> {
             ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
-            
-            //ctx.setFill (cell.getEffect ());
-            //ctx.fillRect (cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
         });
         
         level.getVisibleGates (px, py).forEach (gate -> {
             ctx.setFill (Color.BROWN);
             if (gate.isVertical ()) {                
-                ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - 30, 10, 60);
+                ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
             } else {                
-                ctx.fillRect (cx + gate.getX () * ts - 30, cy + gate.getY () * ts - 5, 60, 10);
+                ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
             }
         });
         
-        ctx.drawImage (player, cx - 12, cy - 24, 24, 48);
-        
-        //ctx.setFill (Color.CYAN);
-        //ctx.fillRect (cx - 1, cy - 1, 3, 3);
+        ctx.drawImage (player, cx - 10, cy - 20, 20, 40);
     }
     
 }
