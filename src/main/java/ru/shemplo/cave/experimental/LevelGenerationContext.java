@@ -20,4 +20,6 @@ public class LevelGenerationContext {
     
     private List <IPoint> seeds;
     
+    private List <List <LevelCell>> part2cells;
+    
 }

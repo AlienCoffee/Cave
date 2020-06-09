@@ -22,7 +22,7 @@ public class LevelCell {
     
     private LevelPassage topPass, rightPass, bottomPass, leftPass;
     
-    private int part = 0;
+    private int part = 0, subpart = 0;
     
     public List <LevelCell> getPartNeighbours () {
         return Arrays.asList  (top, right, bottom, left);
