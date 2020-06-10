@@ -1,5 +1,7 @@
 package ru.shemplo.cave.app.scenes;
 
+import java.util.List;
+
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
 import javafx.scene.canvas.Canvas;
@@ -72,16 +74,24 @@ public class GameScene extends AbstractScene {
         app.getStage ().getScene ().setOnKeyPressed (ke -> {
             switch (ke.getCode ()) {
                 case W: {
-                    if (level.canStepOnFrom (0, -1, mx, my)) { my -= 1; }
+                    if (ke.isShiftDown ()) {
+                        my -= 1;
+                    } else if (level.canStepOnFrom (0, -1, mx, my)) { my -= 1; }
                 } break;
                 case A: {
-                    if (level.canStepOnFrom (-1, 0, mx, my)) { mx -= 1; }
+                    if (ke.isShiftDown ()) {
+                        mx -= 1;
+                    } else if (level.canStepOnFrom (-1, 0, mx, my)) { mx -= 1; }
                 } break;
                 case S: {
-                    if (level.canStepOnFrom (0, +1, mx, my)) { my += 1; }
+                    if (ke.isShiftDown ()) {
+                        my += 1;
+                    } else if (level.canStepOnFrom (0, +1, mx, my)) { my += 1; }
                 } break;
                 case D: {
-                    if (level.canStepOnFrom (+1, 0, mx, my)) { mx += 1; }
+                    if (ke.isShiftDown ()) {
+                        mx += 1;
+                    } else if (level.canStepOnFrom (+1, 0, mx, my)) { mx += 1; }
                 } break;
                 
                 default: break;
@@ -108,6 +118,11 @@ public class GameScene extends AbstractScene {
         player = new WritableImage (playerSet.getPixelReader (), 316, 44, 132, 326);
     }
     
+    private List <Color> subpartColors = List.of (
+        Color.RED, Color.BLUE, Color.GREEN, Color.BLUEVIOLET, Color.YELLOW, Color.CYAN,
+        Color.BROWN, Color.LIME, Color.BLACK, Color.TOMATO, Color.CADETBLUE
+    );
+    
     private void render () {
         //final var size = level.getSize ();
         
@@ -121,6 +136,9 @@ public class GameScene extends AbstractScene {
         
         level.getVisibleCells (px, py, 1.0).forEach (cell -> {
             ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
+            
+            ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
+            ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 10, 10);
         });
         
         level.getVisibleGates (px, py).forEach (gate -> {

@@ -95,8 +95,11 @@ public class MazeGenerator {
     public static LevelGenerationContext generateMaze (int width, int height, int parts) {
         var context = generateMask (width, height, parts);
         context = generatePassagesTree (context);
-        context = generateSubparts (context);
-        context = generateCyclesWithinSubparts (context);
+        context = generateSubparts (context, 15);
+        
+        context = generateCyclesWithinSubparts (context, 23);
+        context = generateGatesBetweenSubparts (context);
+        context = generateSlitsBetweenParts (context);
         
         return context;
     }
@@ -201,23 +204,6 @@ public class MazeGenerator {
             }
         }
         
-        /*
-        for (int h = 0; h < maze.length; h++) {
-            for (int w = 0; w < maze [h].length; w++) {
-                final var cell = maze [h][w];
-                
-                if (w < maze [h].length - 1 && cell.getPart () == maze [h][w + 1].getPart ()) {
-                    cell.setRight (maze [h][w + 1]);
-                    maze [h][w + 1].setLeft (cell);
-                } 
-                if (h < maze.length - 1 && cell.getPart () == maze [h + 1][w].getPart ()) {
-                    cell.setBottom (maze [h + 1][w]);
-                    maze [h + 1][w].setTop (cell);
-                }
-            }
-        }
-        */
-        
         return LevelGenerationContext.builder ()
              . part2cells (part2cells)
              . seeds (seeds)
@@ -286,7 +272,7 @@ public class MazeGenerator {
             }
             
             if (predicate.test (cell, neighbour)) {                
-                final var passage = LevelPassage.of (cell, nei);
+                final var passage = LevelPassage.of (cell, nei, false);
                 cellPassage.accept (cell, passage);
                 neiPassage.accept (nei, passage);
                 
@@ -297,7 +283,7 @@ public class MazeGenerator {
         }).orElse (false);
     }
     
-    private static LevelGenerationContext generateSubparts (LevelGenerationContext context) {
+    private static LevelGenerationContext generateSubparts (LevelGenerationContext context, int subparts) {
         final var mask = context.getMask ();
         
         final var part2subpart2cells = new ArrayList <List <List <LevelCell>>> ();
@@ -342,7 +328,7 @@ public class MazeGenerator {
                 
             }
             
-            part2subpart2cells.set (p, relaxSubparts (part2subpart2cells.get (p), 15, -1));
+            part2subpart2cells.set (p, relaxSubparts (part2subpart2cells.get (p), subparts, -1));
         }
         
         context.setPart2subpart2cells (part2subpart2cells);
@@ -417,13 +403,13 @@ public class MazeGenerator {
                  . collect (Collectors.toList ());
     }
     
-    private static LevelGenerationContext generateCyclesWithinSubparts (LevelGenerationContext context) {
+    private static LevelGenerationContext generateCyclesWithinSubparts (LevelGenerationContext context, int reduceFactor) {
         final BiPredicate <LevelCell, LevelCell> predicate = (a, b) -> 
             a.getPart () == b.getPart () && a.getSubpart () == b.getSubpart ();
             
         for (final var subpart : context.getPart2subpart2cells ()) {
             for (final var cells : subpart) {
-                final var extra = cells.size () / 23;
+                final int extra = cells.size () / Math.max (reduceFactor, 1);
                 var rest = extra;
                 
                 final var mutableCells = new ArrayList <> (cells);
@@ -446,6 +432,37 @@ public class MazeGenerator {
                 }
             }
         }
+        
+        return context;
+    }
+    
+    private static LevelGenerationContext generateGatesBetweenSubparts (LevelGenerationContext context) {
+        final var mask = context.getMask ();
+        
+        for (int h = 0; h < mask.length; h++) {
+            for (int w = 0; w < mask [h].length; w++) {
+                final var cell = mask [h][w];
+                
+                Optional.ofNullable (cell.getRightPass ()).ifPresent (passage -> {
+                    final var nei = passage.getAnother (cell);
+                    if (cell.getPart () == nei.getPart () && cell.getSubpart () != nei.getSubpart ()) {
+                        passage.setGate (true);
+                    }
+                });
+                
+                Optional.ofNullable (cell.getBottomPass ()).ifPresent (passage -> {
+                    final var nei = passage.getAnother (cell);
+                    if (cell.getPart () == nei.getPart () && cell.getSubpart () != nei.getSubpart ()) {
+                        passage.setGate (true);
+                    }
+                });
+            }
+        }
+        
+        return context;
+    }
+    
+    private static LevelGenerationContext generateSlitsBetweenParts (LevelGenerationContext context) {
         
         return context;
     }

@@ -15,6 +15,8 @@ public class LevelPassage {
     
     private LevelCell from, to;
     
+    private boolean gate, closed;
+    
     public LevelCell getAnother (LevelCell cell) {
         if (from == cell) { return to; }
         if (to == cell) { return from; }
@@ -25,12 +27,12 @@ public class LevelPassage {
     private static final Comparator <LevelCell> cellsOrderer = Comparator
           . comparing (LevelCell::getY).thenComparing (LevelCell::getX);
     
-    public static LevelPassage of (LevelCell cellA, LevelCell cellB) {
+    public static LevelPassage of (LevelCell cellA, LevelCell cellB, boolean isGate) {
         final var order = cellsOrderer.compare (cellA, cellB);
         if (order > 0) {            
-            return new LevelPassage (cellB, cellA);
+            return new LevelPassage (cellB, cellA, isGate, true);
         } else if (order < 0) {
-            return new LevelPassage (cellA, cellB);            
+            return new LevelPassage (cellA, cellB, isGate, true);
         }
         
         throw new IllegalArgumentException ();

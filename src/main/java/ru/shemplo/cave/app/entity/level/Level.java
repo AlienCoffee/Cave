@@ -21,7 +21,11 @@ public class Level {
     @Getter private int ix, iy;
     
     public Level () {
-        map = MazeGenerator.generateMaze (100, 100, 3).getMask ();
+        final var context = MazeGenerator.generateMaze (80, 80, 4);
+        map = context.getMask ();
+        
+        ix = context.getSeeds ().get (0).X;
+        iy = context.getSeeds ().get (0).Y;
     }
     
     public boolean canStepOn (int x, int y) {
@@ -34,13 +38,16 @@ public class Level {
     
     public boolean canStepOnFrom (int dx, int dy, int fx, int fy) {
         final var cell = map [fy][fx];
-        return cell.getPassageNeighbour (dx, dy) != null;
+        
+        final var passage = cell.getPassageNeighbour (dx, dy);
+        return passage != null && (!passage.isGate () || !passage.isClosed ());
     }
     
     private final Queue <IPoint> queue = new LinkedList <> ();
     private final Set <IPoint> visited = new HashSet <> ();
     
     private void runBFS (int fromX, int fromY, double maxDistance, BiConsumer <LevelCell, LevelCell> cellVisitor) {
+        if (fromX < 0 || fromY < 0 || fromY >= map.length || fromX >= map [fromY].length) { return; } 
         queue.clear (); visited.clear ();
         
         final var fromPoint = IPoint.of (fromX, fromY);
@@ -74,7 +81,7 @@ public class Level {
     public List <RenderCell> getVisibleCells (int x, int y, double illumination) {
         final var list = new ArrayList <RenderCell> ();
         
-        runBFS (x, y, 1.0, (__, point) -> {
+        runBFS (x, y, 200.0, (__, point) -> {
             final int px = (int) point.getX ();
             final int py = (int) point.getY ();
             list.add (getCellSafe (px, py, px - x, py - y));            
@@ -86,31 +93,24 @@ public class Level {
     public List <RenderGate> getVisibleGates (int x, int y) {
         final var gs = new ArrayList <RenderGate> ();
         
-        /*
-        runBFS (x, y, maxDistance, (from, point) -> {
+        runBFS (x, y, 200.0, (__, point) -> {
             final int px = (int) point.getX ();
             final int py = (int) point.getY ();
+            final var cell = map [py][px];
             
-            if (point.getZ () > maxDistance - 1) {
-                final var dx = (int) (px - from.getX ());
-                final var dy = (int) (py - from.getY ());
-                
-                if (dy < 0 && dx == 0 && gates [py][px * 2] > 0) {
-                    gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).build ());
-                } else if (dx < 0 && dy == 0 && gates [py][px * 2 + 1] > 0) {
-                    gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).build ());
-                }
-            } else {                
-                if (gates [py][px * 2] > 0) {                
-                    gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).build ());            
-                }
-                if (gates [py][px * 2 + 1] > 0) {                
-                    gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).build ());            
-                }
+            if (cell.getTopPass () != null && cell.getTopPass ().isGate ()) {                
+                gs.add (RenderGate.builder ().x (px - x).y (py - y - 0.5).vertical (false).build ());            
             }
-            
+            if (cell.getRightPass () != null && cell.getRightPass ().isGate ()) {                
+                gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).build ());            
+            }
+            if (cell.getBottomPass () != null && cell.getBottomPass ().isGate ()) {                
+                gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).vertical (false).build ());            
+            }
+            if (cell.getLeftPass () != null && cell.getLeftPass ().isGate ()) {                
+                gs.add (RenderGate.builder ().x (px - x - 0.5).y (py - y).vertical (true).build ());            
+            }
         });
-        */
         
         return gs;
     }
@@ -118,12 +118,14 @@ public class Level {
     private RenderCell getCellSafe (int x, int y, int rx, int ry) {
         if (y < 0 || y >= map.length || x < 0 || x >= map [y].length) {
             return RenderCell.builder ().x (rx).y (ry).image (LevelTextures.symbol2texture.get (' '))
+                 . subpart (map [y][x].getSubpart ())
                  . effect (Color.BLACK).build ();
         }
         
         //final var distance = Math.sqrt (rx * rx + ry * ry);
         return RenderCell.builder ().x (rx).y (ry)
              . image (LevelTextures.symbol2texture.get (map [y][x].getSymbol ()))
+             . subpart (map [y][x].getSubpart ())
              . effect (Color.gray (0.025, 1.0))
              . build ();
     }

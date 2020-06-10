@@ -15,4 +15,6 @@ public class RenderCell {
     
     private Color effect;
     
+    private int subpart;
+    
 }
