@@ -24,7 +24,7 @@ public class LevelCell {
     
     private int part = 0, subpart = 0;
     
-    public List <LevelCell> getPartNeighbours () {
+    public List <LevelCell> getMapNeighbours () {
         return Arrays.asList  (top, right, bottom, left);
     }
     
@@ -76,6 +76,44 @@ public class LevelCell {
         }
         
         throw new IllegalArgumentException ();
+    }
+    
+    public char getMapSymbol () {
+        boolean t = getTop () != null, r = getRight () != null,
+                b = getBottom () != null, l = getLeft () != null;
+        if (t && r && b && l) {
+            return '┼';
+        } else if (t && r && b) {
+            return '├';
+        } else if (t && r && l) {
+            return '┴';
+        } else if (t && b && l) {
+            return '┤';
+        } else if (r && b && l) {
+            return '┬';
+        } else if (t && r) {
+            return '└';
+        } else if (t && b) {
+            return '│';
+        } else if (t && l) {
+            return '┘';
+        } else if (r && b) {
+            return '┌';
+        } else if (r && l) {
+            return '─';
+        } else if (b && l) {
+            return '┐';
+        } else if (t) {
+            return '╧';
+        } else if (r) {
+            return '╟';
+        } else if (b) {
+            return '╤';
+        } else if (l) {
+            return '╢';
+        }
+        
+        return ' ';
     }
     
     public char getSymbol () {

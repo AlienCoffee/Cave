@@ -22,4 +22,6 @@ public class LevelGenerationContext {
     
     private List <List <LevelCell>> part2cells;
     
+    private List <List <List <LevelCell>>> part2subpart2cells;
+    
 }

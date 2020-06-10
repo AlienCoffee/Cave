@@ -9,8 +9,10 @@ import java.util.List;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
+import java.util.Stack;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.function.BiConsumer;
+import java.util.function.BiPredicate;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
@@ -23,7 +25,7 @@ import ru.shemplo.snowball.stuctures.Trio;
 
 public class MazeGenerator {
     
-    private static final Random r = new Random ();
+    private static final Random r = new Random (1L);
     
     private static final int parts = 4;
     private static final int size = parts * 20;
@@ -54,7 +56,7 @@ public class MazeGenerator {
         System.out.println ("Maze:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 1) {                    
+                if (maze [i][j].getPart () == 1 && maze [i][j].getSubpart () == 1) {                    
                     System.out.print (maze [i][j].getSymbol ()); // SYSOUT
                 } else {
                     System.out.print (" "); // SYSOUT
@@ -94,6 +96,7 @@ public class MazeGenerator {
         var context = generateMask (width, height, parts);
         context = generatePassagesTree (context);
         context = generateSubparts (context);
+        context = generateCyclesWithinSubparts (context);
         
         return context;
     }
@@ -106,6 +109,16 @@ public class MazeGenerator {
         for (int h = 0; h < maze.length; h++) {
             for (int w = 0; w < maze [h].length; w++) {
                 maze [h][w] = new LevelCell (w, h);
+                
+                if (w > 0) {
+                    maze [h][w - 1].setRight (maze [h][w]);
+                    maze [h][w].setLeft (maze [h][w - 1]);
+                }
+                
+                if (h > 0) {
+                    maze [h - 1][w].setBottom (maze [h][w]);
+                    maze [h][w].setTop (maze [h - 1][w]);
+                }
             }
         }
         
@@ -164,16 +177,14 @@ public class MazeGenerator {
                         final int rx = fpoint.X + s.X, ry = fpoint.Y + s.Y;
                         
                         if (rx < 0 || rx >= width || ry < 0 || ry >= height) { continue; }
-                        if (cell.hasRelative (s)) { continue; }
+                        //if (cell.hasRelative (s)) { continue; }
                         
                         final var rcell = maze [ry][rx];
                         if (rcell.getPart () > 0) { continue; }
                         searchFlag = true;
                         updated += 1;
                         
-                        if (r.nextBoolean ()) {                            
-                            cell.setRelative (s, false, rcell);
-                            rcell.setRelative (s, true, cell);
+                        if (r.nextBoolean ()) {
                             rcell.setPart (cell.getPart ());
                             
                             part2cells.get (cell.getPart () - 1).add (rcell);
@@ -190,6 +201,23 @@ public class MazeGenerator {
             }
         }
         
+        /*
+        for (int h = 0; h < maze.length; h++) {
+            for (int w = 0; w < maze [h].length; w++) {
+                final var cell = maze [h][w];
+                
+                if (w < maze [h].length - 1 && cell.getPart () == maze [h][w + 1].getPart ()) {
+                    cell.setRight (maze [h][w + 1]);
+                    maze [h][w + 1].setLeft (cell);
+                } 
+                if (h < maze.length - 1 && cell.getPart () == maze [h + 1][w].getPart ()) {
+                    cell.setBottom (maze [h + 1][w]);
+                    maze [h + 1][w].setTop (cell);
+                }
+            }
+        }
+        */
+        
         return LevelGenerationContext.builder ()
              . part2cells (part2cells)
              . seeds (seeds)
@@ -197,40 +225,41 @@ public class MazeGenerator {
              . build ();
     }
     
+    private static final List <
+        Trio <Function <LevelCell, Pair <LevelCell, LevelPassage>>, 
+        BiConsumer <LevelCell, LevelPassage>, 
+        BiConsumer <LevelCell, LevelPassage>>
+    > connections = new ArrayList <> (List.of (
+        Trio.mt (c -> Pair.mp (c.getTop (),    c.getTopPass ()),    LevelCell::setTopPass,    LevelCell::setBottomPass),
+        Trio.mt (c -> Pair.mp (c.getRight (),  c.getRightPass ()),  LevelCell::setRightPass,  LevelCell::setLeftPass),
+        Trio.mt (c -> Pair.mp (c.getBottom (), c.getBottomPass ()), LevelCell::setBottomPass, LevelCell::setTopPass),
+        Trio.mt (c -> Pair.mp (c.getLeft (),   c.getLeftPass ()),   LevelCell::setLeftPass,   LevelCell::setRightPass)
+    ));
+    
     private static LevelGenerationContext generatePassagesTree (LevelGenerationContext context) {
+        final BiPredicate <LevelCell, LevelCell> predicate = (a, b) -> a.getPart () == b.getPart ();
         final var mask = context.getMask ();
-        
-        final var connections = new ArrayList <> (List.<Trio <
-            Function <LevelCell, LevelCell>, 
-            BiConsumer <LevelCell, LevelPassage>, 
-            BiConsumer <LevelCell, LevelPassage>>
-        > of (
-            Trio.mt (LevelCell::getTop,    LevelCell::setTopPass,    LevelCell::setBottomPass),
-            Trio.mt (LevelCell::getRight,  LevelCell::setRightPass,  LevelCell::setLeftPass),
-            Trio.mt (LevelCell::getBottom, LevelCell::setBottomPass, LevelCell::setTopPass),
-            Trio.mt (LevelCell::getLeft,   LevelCell::setLeftPass,   LevelCell::setRightPass)
-        ));
         
         for (final var seed: context.getSeeds ()) {
             final var seedCell = mask [seed.Y][seed.X];
             final var seedCellPoint = seedCell.getPoint (0);
             
-            final var queue = new LinkedList <IPoint> ();
             final var visited = new HashSet <IPoint> ();
+            final var stack = new Stack <IPoint> ();
             
             visited.add (seedCellPoint);
-            queue.add (seedCellPoint);
+            stack.add (seedCellPoint);
             
-            while (!queue.isEmpty ()) {
-                final var cellPoint = queue.poll ();
+            while (!stack.isEmpty ()) {
+                final var cellPoint = stack.pop ();
                 final var cell = mask [cellPoint.Y][cellPoint.X];
                 
                 Collections.shuffle (connections, r);
                 for (final var connection : connections) {
-                    final var nei = connection.F.apply (cell);
+                    final var neiNpass = connection.F.apply (cell);
                     
-                    if (addPassage (cell, nei, connection.S, connection.T, visited)) {
-                        queue.add (nei.getPoint (0));
+                    if (addPassage (cell, neiNpass.F, connection.S, connection.T, predicate, visited)) {
+                        stack.add (neiNpass.F.getPoint (0));
                     }
                 }
             }
@@ -243,21 +272,28 @@ public class MazeGenerator {
         LevelCell cell, LevelCell neighbour, 
         BiConsumer <LevelCell, LevelPassage> cellPassage, 
         BiConsumer <LevelCell, LevelPassage> neiPassage,
+        BiPredicate <LevelCell, LevelCell> predicate,
         Set <IPoint> visited
     ) {
         return Optional.ofNullable (neighbour).map (nei -> {
             final var point = nei.getPoint (0);
-            if (visited.contains (point)) { 
-                return false; // already connected
+            if (visited != null) {                
+                if (visited.contains (point)) { 
+                    return false; // already connected
+                }
+                
+                visited.add (point);
             }
             
-            visited.add (point);
-            
-            final var passage = LevelPassage.of (cell, nei);
-            cellPassage.accept (cell, passage);
-            neiPassage.accept (nei, passage);
-            
-            return true;
+            if (predicate.test (cell, neighbour)) {                
+                final var passage = LevelPassage.of (cell, nei);
+                cellPassage.accept (cell, passage);
+                neiPassage.accept (nei, passage);
+                
+                return true;
+            } else {                
+                return false;
+            }
         }).orElse (false);
     }
     
@@ -309,6 +345,7 @@ public class MazeGenerator {
             part2subpart2cells.set (p, relaxSubparts (part2subpart2cells.get (p), 15, -1));
         }
         
+        context.setPart2subpart2cells (part2subpart2cells);
         return context;
     }
     
@@ -333,7 +370,6 @@ public class MazeGenerator {
         
         relaxLoop:
         for (final var cells : toRelax) {
-            //System.out.println (cells.size ()); // SYSOUT
             for (final var cell : cells) {
                 for (final var passage : cell.getPassageNeighbours ()) {                        
                     if (passage == null) { continue; }
@@ -379,6 +415,39 @@ public class MazeGenerator {
                      }
                  })
                  . collect (Collectors.toList ());
+    }
+    
+    private static LevelGenerationContext generateCyclesWithinSubparts (LevelGenerationContext context) {
+        final BiPredicate <LevelCell, LevelCell> predicate = (a, b) -> 
+            a.getPart () == b.getPart () && a.getSubpart () == b.getSubpart ();
+            
+        for (final var subpart : context.getPart2subpart2cells ()) {
+            for (final var cells : subpart) {
+                final var extra = cells.size () / 23;
+                var rest = extra;
+                
+                final var mutableCells = new ArrayList <> (cells);
+                
+                extraLoop:
+                while (rest > 0) {
+                    Collections.shuffle (mutableCells, r);
+                    for (final var cell : mutableCells) {
+                        Collections.shuffle (connections, r);
+                        for (final var connection : connections) {
+                            final var neiNpass = connection.F.apply (cell);
+                            if (neiNpass.S != null) { continue; }
+                            
+                            if (addPassage (cell, neiNpass.F, connection.S, connection.T, predicate, null)) {
+                                rest--; // extra passage is added
+                                continue extraLoop;
+                            }
+                        }
+                    }
+                }
+            }
+        }
+        
+        return context;
     }
     
 }
