@@ -3,6 +3,7 @@ package ru.shemplo.cave.experimental;
 import java.util.ArrayList;
 import java.util.Collections;
 import java.util.Comparator;
+import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
@@ -17,9 +18,11 @@ import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
+import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.LevelCell;
 import ru.shemplo.cave.app.entity.level.LevelPassage;
 import ru.shemplo.cave.utils.IPoint;
+import ru.shemplo.cave.utils.Utils;
 import ru.shemplo.snowball.stuctures.Pair;
 import ru.shemplo.snowball.stuctures.Trio;
 
@@ -31,7 +34,10 @@ public class MazeGenerator {
     private static final int size = parts * 20;
     
     public static void main (String ... args) {
-        final var maze = generateMaze (size, size, parts).getMask ();
+        final var context = generateMaze (size, size, parts);
+        final var maze = context.getMask ();
+        
+        System.out.println ("Seed points: " + context.getSeeds ()); // SYSOUT
         
         System.out.println ("Maze mask:"); // SYSOUT
         for (int i = 0; i < size; i++) {
@@ -106,40 +112,9 @@ public class MazeGenerator {
     
     private static LevelGenerationContext generateMask (int width, int height, int parts) {
         final var part2cells = new ArrayList <List <LevelCell>> ();
-        final var maze = new LevelCell [height][width];
-        final var seeds = new ArrayList <IPoint> ();
+        final var maze = initializeNetwork (width, height);
+        final var seeds = generateSeeds (maze, parts);
         
-        for (int h = 0; h < maze.length; h++) {
-            for (int w = 0; w < maze [h].length; w++) {
-                maze [h][w] = new LevelCell (w, h);
-                
-                if (w > 0) {
-                    maze [h][w - 1].setRight (maze [h][w]);
-                    maze [h][w].setLeft (maze [h][w - 1]);
-                }
-                
-                if (h > 0) {
-                    maze [h - 1][w].setBottom (maze [h][w]);
-                    maze [h][w].setTop (maze [h - 1][w]);
-                }
-            }
-        }
-        
-        seedsGenerator:
-        while (seeds.size () < parts) {
-            final int x = r.nextInt (size), y = r.nextInt (size);
-            for (var seed : seeds) {
-                if (Math.abs (seed.F - x) <= 2 || Math.abs (seed.S - y) <= 2
-                        || x < 1 || y < 1 || x >= size - 1 || y >= size - 1) {
-                    continue seedsGenerator;
-                }
-            }
-            
-            seeds.add (IPoint.of (x, y));
-            maze [y][x].setPart (seeds.size ());
-        }
-        
-        System.out.println ("Seed points: " + seeds); // SYSOUT
         final var fronts = new ArrayList <List <IPoint>> ();
         for (int p = 0; p < parts; p++) {
             final var point = seeds.get (p);
@@ -211,6 +186,48 @@ public class MazeGenerator {
              . build ();
     }
     
+    private static LevelCell [][] initializeNetwork (int width, int height) {
+        final var maze = new LevelCell [height][width];
+        
+        for (int h = 0; h < maze.length; h++) {
+            for (int w = 0; w < maze [h].length; w++) {
+                maze [h][w] = new LevelCell (w, h);
+                
+                if (w > 0) {
+                    maze [h][w - 1].setRight (maze [h][w]);
+                    maze [h][w].setLeft (maze [h][w - 1]);
+                }
+                
+                if (h > 0) {
+                    maze [h - 1][w].setBottom (maze [h][w]);
+                    maze [h][w].setTop (maze [h - 1][w]);
+                }
+            }
+        }
+        
+        return maze;
+    }
+    
+    private static List <IPoint> generateSeeds (LevelCell [][] maze, int parts) {
+        final var seeds = new ArrayList <IPoint> ();
+        
+        seedsGenerator:
+        while (seeds.size () < parts) {
+            final int x = r.nextInt (size), y = r.nextInt (size);
+            for (var seed : seeds) {
+                if (Math.abs (seed.F - x) <= 2 || Math.abs (seed.S - y) <= 2
+                        || x < 1 || y < 1 || x >= size - 1 || y >= size - 1) {
+                    continue seedsGenerator;
+                }
+            }
+            
+            seeds.add (IPoint.of (x, y));
+            maze [y][x].setPart (seeds.size ());
+        }
+
+        return seeds;
+    }
+    
     private static final List <
         Trio <Function <LevelCell, Pair <LevelCell, LevelPassage>>, 
         BiConsumer <LevelCell, LevelPassage>, 
@@ -272,7 +289,7 @@ public class MazeGenerator {
             }
             
             if (predicate.test (cell, neighbour)) {                
-                final var passage = LevelPassage.of (cell, nei, false);
+                final var passage = LevelPassage.of (cell, nei, null);
                 cellPassage.accept (cell, passage);
                 neiPassage.accept (nei, passage);
                 
@@ -314,9 +331,9 @@ public class MazeGenerator {
                     final var cell = mask [cellPoint.Y][cellPoint.X];
                     
                     for (final var passage : cell.getPassageNeighbours ()) {                        
-                        if (passage == null) { continue; }
+                        if (passage.F == null) { continue; }
                         
-                        final var nei = passage.getAnother (cell);
+                        final var nei = passage.F.getAnother (cell);
                         if (nei.getSubpart () == 0 && ssize > 0) {
                             nei.setSubpart (cell.getSubpart ());
                             queue.add (nei.getPoint (0));
@@ -358,9 +375,9 @@ public class MazeGenerator {
         for (final var cells : toRelax) {
             for (final var cell : cells) {
                 for (final var passage : cell.getPassageNeighbours ()) {                        
-                    if (passage == null) { continue; }
+                    if (passage.F == null) { continue; }
                     
-                    final var nei = passage.getAnother (cell);
+                    final var nei = passage.F.getAnother (cell);
                     final var neiSubpart = nei.getSubpart ();
                     
                     final var bigEnough = subpart2cells.get (neiSubpart - 1).size () >= treshold;
@@ -446,14 +463,14 @@ public class MazeGenerator {
                 Optional.ofNullable (cell.getRightPass ()).ifPresent (passage -> {
                     final var nei = passage.getAnother (cell);
                     if (cell.getPart () == nei.getPart () && cell.getSubpart () != nei.getSubpart ()) {
-                        passage.setGate (true);
+                        passage.setGateType (GateType.GATE);
                     }
                 });
                 
                 Optional.ofNullable (cell.getBottomPass ()).ifPresent (passage -> {
                     final var nei = passage.getAnother (cell);
                     if (cell.getPart () == nei.getPart () && cell.getSubpart () != nei.getSubpart ()) {
-                        passage.setGate (true);
+                        passage.setGateType (GateType.GATE);
                     }
                 });
             }
@@ -463,6 +480,55 @@ public class MazeGenerator {
     }
     
     private static LevelGenerationContext generateSlitsBetweenParts (LevelGenerationContext context) {
+        final var mask = context.getMask ();
+        
+        final var fronts = new HashMap <IPoint, List <LevelCell>> ();
+        
+        for (int h = 0; h < mask.length; h++) {
+            for (int w = 0; w < mask [h].length; w++) {
+                final var cell = mask [h][w];
+                final var cp = cell.getPart ();                
+                
+                for (final var neiNoffset : cell.getMapNeighbours ()) {
+                    if (neiNoffset.F == null) { continue; }
+                    final var np = neiNoffset.F.getPart ();
+                    if (cp == np) { continue; }
+                    
+                    // This is check that only top and left cells will be on fronts
+                    if (neiNoffset.S.X != 1 && neiNoffset.S.Y != 1) { continue; }
+                    
+                    final var connection = IPoint.of (Math.min (cp, np), Math.max (cp, np));
+                    fronts.putIfAbsent (connection, new ArrayList <LevelCell> ());
+                    fronts.get (connection).add (Utils.min (cell, neiNoffset.F));
+                }
+            }
+        }
+        
+        System.out.println ("Fronts: " + fronts.size ()); // SYSOUT
+        fronts.forEach ((__, cells) -> {
+            Collections.shuffle (cells, r);
+            var slits = 1 + r.nextInt (3);
+            System.out.println ("For front " + __ + ": " + slits); // SYSOUT
+            for (int i = 0; i < slits; i++) {
+                final var cell = cells.get (i);
+                final var nei = List.of (cell.getRight (), cell.getLeft ()).stream ()
+                    . skip (r.nextBoolean () ? 1 : 0).findFirst ().orElse (null);
+                if (nei == null) {
+                    slits += 1;
+                    continue;
+                }
+                
+                if (cell.getRight () == nei) {
+                    addPassage (cell, nei, LevelCell::setRightPass, LevelCell::setLeftPass, (a, b) -> true, null);
+                    cell.getRightPass ().setGateType (GateType.SILT);
+                    System.out.println (cell.getPoint (0)); // SYSOUT
+                } else {
+                    addPassage (cell, nei, LevelCell::setBottomPass, LevelCell::setTopPass, (a, b) -> true, null);
+                    cell.getBottomPass ().setGateType (GateType.SILT);
+                    System.out.println (cell.getPoint (0)); // SYSOUT
+                }
+            }
+        });
         
         return context;
     }

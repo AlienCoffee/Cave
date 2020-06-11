@@ -17,6 +17,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import ru.shemplo.cave.app.CaveApplication;
+import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.Level;
 
 public class GameScene extends AbstractScene {
@@ -61,6 +62,8 @@ public class GameScene extends AbstractScene {
         
         final var level = new Level ();
         startGame (level);
+        
+        canvasC.requestFocus ();
     }
     
     private Level level;
@@ -92,6 +95,9 @@ public class GameScene extends AbstractScene {
                     if (ke.isShiftDown ()) {
                         mx += 1;
                     } else if (level.canStepOnFrom (+1, 0, mx, my)) { mx += 1; }
+                } break;
+                case ENTER: {
+                    level.openGates (mx, my);
                 } break;
                 
                 default: break;
@@ -142,7 +148,10 @@ public class GameScene extends AbstractScene {
         });
         
         level.getVisibleGates (px, py).forEach (gate -> {
-            ctx.setFill (Color.BROWN);
+            ctx.setFill (gate.getType () == GateType.GATE 
+                            ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
+                            : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
+                        );
             if (gate.isVertical ()) {                
                 ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
             } else {                
@@ -151,6 +160,10 @@ public class GameScene extends AbstractScene {
         });
         
         ctx.drawImage (player, cx - 10, cy - 20, 20, 40);
+        
+        ctx.setFill (Color.YELLOW);
+        ctx.fillText ("X: " + mx, 20, 40);
+        ctx.fillText ("Y: " + my, 20, 55);
     }
     
 }

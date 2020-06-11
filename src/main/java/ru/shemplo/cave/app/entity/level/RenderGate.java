@@ -14,4 +14,8 @@ public class RenderGate {
     
     private boolean vertical;
     
+    private GateType type;
+    
+    private boolean closed;
+    
 }

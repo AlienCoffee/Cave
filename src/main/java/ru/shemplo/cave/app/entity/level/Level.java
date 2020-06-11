@@ -40,7 +40,7 @@ public class Level {
         final var cell = map [fy][fx];
         
         final var passage = cell.getPassageNeighbour (dx, dy);
-        return passage != null && (!passage.isGate () || !passage.isClosed ());
+        return passage != null && (passage.getGateType () == null || !passage.isClosed ());
     }
     
     private final Queue <IPoint> queue = new LinkedList <> ();
@@ -60,9 +60,9 @@ public class Level {
             final var cell = map [point.Y][point.X];
             
             cell.getPassageNeighbours ().forEach (passage -> {
-                if (passage == null) { return; }
+                if (passage.F == null) { return; }
                 
-                final var nei = passage.getAnother (cell);
+                final var nei = passage.F.getAnother (cell);
                 final var neiPoint = nei.getPoint (point.D + 1);
                 if (fromPoint.distance (neiPoint) > maxDistance || neiPoint.D > maxDistance || visited.contains (neiPoint)) {
                     return; // too far or already visited
@@ -81,7 +81,7 @@ public class Level {
     public List <RenderCell> getVisibleCells (int x, int y, double illumination) {
         final var list = new ArrayList <RenderCell> ();
         
-        runBFS (x, y, 200.0, (__, point) -> {
+        runBFS (x, y, 10.0, (__, point) -> {
             final int px = (int) point.getX ();
             final int py = (int) point.getY ();
             list.add (getCellSafe (px, py, px - x, py - y));            
@@ -93,22 +93,30 @@ public class Level {
     public List <RenderGate> getVisibleGates (int x, int y) {
         final var gs = new ArrayList <RenderGate> ();
         
-        runBFS (x, y, 200.0, (__, point) -> {
+        runBFS (x, y, 10.0, (__, point) -> {
             final int px = (int) point.getX ();
             final int py = (int) point.getY ();
             final var cell = map [py][px];
             
-            if (cell.getTopPass () != null && cell.getTopPass ().isGate ()) {                
-                gs.add (RenderGate.builder ().x (px - x).y (py - y - 0.5).vertical (false).build ());            
+            if (cell.getTopPass () != null && cell.getTopPass ().getGateType () != null) {   
+                final var type = cell.getTopPass ().getGateType ();
+                final var closed = cell.getTopPass ().isClosed ();
+                gs.add (RenderGate.builder ().x (px - x).y (py - y - 0.5).vertical (false).type (type).closed (closed).build ());            
             }
-            if (cell.getRightPass () != null && cell.getRightPass ().isGate ()) {                
-                gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).build ());            
+            if (cell.getRightPass () != null && cell.getRightPass ().getGateType () != null) {   
+                final var type = cell.getRightPass ().getGateType ();
+                final var closed = cell.getRightPass ().isClosed ();
+                gs.add (RenderGate.builder ().x (px - x + 0.5).y (py - y).vertical (true).type (type).closed (closed).build ());            
             }
-            if (cell.getBottomPass () != null && cell.getBottomPass ().isGate ()) {                
-                gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).vertical (false).build ());            
+            if (cell.getBottomPass () != null && cell.getBottomPass ().getGateType () != null) {
+                final var type = cell.getBottomPass ().getGateType ();
+                final var closed = cell.getBottomPass ().isClosed ();
+                gs.add (RenderGate.builder ().x (px - x).y (py - y + 0.5).vertical (false).type (type).closed (closed).build ());            
             }
-            if (cell.getLeftPass () != null && cell.getLeftPass ().isGate ()) {                
-                gs.add (RenderGate.builder ().x (px - x - 0.5).y (py - y).vertical (true).build ());            
+            if (cell.getLeftPass () != null && cell.getLeftPass ().getGateType () != null) {
+                final var type = cell.getLeftPass ().getGateType ();
+                final var closed = cell.getLeftPass ().isClosed ();
+                gs.add (RenderGate.builder ().x (px - x - 0.5).y (py - y).vertical (true).type (type).closed (closed).build ());            
             }
         });
         
@@ -128,6 +136,19 @@ public class Level {
              . subpart (map [y][x].getSubpart ())
              . effect (Color.gray (0.025, 1.0))
              . build ();
+    }
+    
+    public void openGates (int x, int y) {
+        if (x < 0 || y < 0 || y >= map.length || x >= map [y].length) { return; } 
+        final var cell = map [y][x];
+        
+        cell.getPassageNeighbours ().forEach (neiNoffset -> {
+            if (neiNoffset.F == null || neiNoffset.F.getGateType () != GateType.GATE) { 
+                return; 
+            }
+            
+            neiNoffset.F.setClosed (!neiNoffset.F.isClosed ());
+        });
     }
     
 }
