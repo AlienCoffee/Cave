@@ -4,19 +4,23 @@ import java.io.Closeable;
 import java.io.IOException;
 import java.net.SocketException;
 import java.net.SocketTimeoutException;
+import java.util.Random;
 
 import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
-public class GameServer implements Closeable {
+public class RunServer implements Closeable {
+    
+    public static final String SERVER_SALT = String.valueOf (new Random ().nextInt ());
     
     public static void main (String ... args) throws IOException, InterruptedException {
+        System.setProperty ("javax.net.ssl.keyStore", "server.jks");
         //System.setProperty ("javax.net.ssl.keyStorePassword", "");
-        //System.setProperty ("javax.net.ssl.keyStore", "server.jks");
         
         System.out.println ("Server started"); // SYSOUT
-        final var server = new GameServer ();
+        @SuppressWarnings ("resource")
+        final var server = new RunServer ();
         server.open (12763);
     }
     
@@ -25,6 +29,8 @@ public class GameServer implements Closeable {
     private Thread acceptor;
     
     public void open (int port) throws IOException {
+        pool.open ();
+        
         final var factory = SSLServerSocketFactory.getDefault ();
         socket = (SSLServerSocket) factory.createServerSocket (port, 10);
         //socket.setNeedClientAuth (true);
@@ -34,11 +40,10 @@ public class GameServer implements Closeable {
         socket.setEnabledProtocols (new String [] {
             "TLSv1.2"
         });
-        socket.setSoTimeout (10000);
+        socket.setSoTimeout (5000);
         
         acceptor = new Thread (() -> {
             while (true) {
-                System.out.println ("New loop"); // SYSOUT
                 if (Thread.currentThread ().isInterrupted ()) {
                     return;
                 }
@@ -46,7 +51,7 @@ public class GameServer implements Closeable {
                 try {                        
                     final var client = (SSLSocket) socket.accept ();
                     System.out.println ("Connection accepted"); // SYSOUT
-                    pool.addConnection (client);
+                    pool.applyConnection (client);
                 } catch (SocketTimeoutException ste) {
                     // this is okey, it's need just to start new cycle loop to check interruption
                 } catch (SocketException se) {
@@ -57,7 +62,7 @@ public class GameServer implements Closeable {
                     
                 }
             }
-        }, "Income-Connections-Acceptor");
+        }, "Income-Connections-Acceptor-Thread");
         acceptor.start ();
     }
 

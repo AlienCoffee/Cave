@@ -1,13 +1,5 @@
 package ru.shemplo.cave.app.scenes;
 
-import java.io.IOException;
-import java.nio.charset.StandardCharsets;
-import java.util.Random;
-
-import javax.net.ssl.SSLParameters;
-import javax.net.ssl.SSLSocket;
-import javax.net.ssl.SSLSocketFactory;
-
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
 import javafx.scene.layout.VBox;
@@ -19,8 +11,6 @@ public class MainMenuScene extends AbstractScene {
     private final Button joinGameB = new Button ("Join expedition");
     private final Button createGameB = new Button ("Create expedition");
     private final Button exitB = new Button ("Exit");
-    
-    private final Button testConnectionB = new Button ("Test connection");
     
     public MainMenuScene (CaveApplication app) {
         super (app);
@@ -39,12 +29,6 @@ public class MainMenuScene extends AbstractScene {
             ApplicationScene.GAME.show (app);
         });
         
-        testConnectionB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
-        menuBox.getChildren ().add (testConnectionB);
-        testConnectionB.setOnAction (ae -> {
-            testConnection ();
-        });
-        
         createGameB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (createGameB);
         createGameB.setDisable (true);
@@ -56,11 +40,10 @@ public class MainMenuScene extends AbstractScene {
         });
     }
     
-    private final Random r = new Random ();
-    
+    /*
     private void testConnection () {
+        System.setProperty ("javax.net.ssl.trustStore", "client.jks");
         //System.setProperty ("javax.net.ssl.trustStorePassword", "");
-        //System.setProperty ("javax.net.ssl.trustStore", "client.jks");
         
         try {
             final var factory = SSLSocketFactory.getDefault ();            
@@ -77,15 +60,14 @@ public class MainMenuScene extends AbstractScene {
             //socket.setSSLParameters (params);
             
             final var out = socket.getOutputStream ();
+            final var in = socket.getInputStream ();
             
-            out.write (("Test connection " + r.nextInt ()).getBytes (StandardCharsets.UTF_8));
-            out.flush ();
-            
-            out.close ();
+            System.out.println (new String (in.readNBytes (32), StandardCharsets.UTF_8)); // SYSOUT
         } catch (IOException ioe) {
             ioe.printStackTrace ();
         }
     }
+    */
 
     @Override
     public void onVisible () {
