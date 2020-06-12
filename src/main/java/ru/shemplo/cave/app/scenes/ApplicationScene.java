@@ -10,8 +10,10 @@ import ru.shemplo.cave.app.CaveApplication;
 
 public enum ApplicationScene {
     
-    MAIN_MENU (MainMenuScene::new, List.of ("/common.css"), true),
-    GAME (GameScene::new, List.of ("/common.css"), false),
+    MAIN_MENU     (MainMenuScene::new, List.of ("/common.css"), true),
+    GAME_JOIN     (GameJoinScene::new, List.of ("/common.css"), false),
+    GAME_SETTINGS (GameSettingsScene::new, List.of ("/common.css"), false),
+    GAME          (GameScene::new, List.of ("/common.css"), false),
     
     ;
     
@@ -21,7 +23,10 @@ public enum ApplicationScene {
     
     private AbstractScene scene;
     
-    private ApplicationScene (Function <CaveApplication, AbstractScene> sceneProducer, List <String> styles, boolean keepLoaded) {
+    private ApplicationScene (
+        Function <CaveApplication, AbstractScene> sceneProducer, 
+        List <String> styles, boolean keepLoaded
+    ) {
         this.styles = preparePaths (styles, CSSs_PATH);
         this.sceneProducer = sceneProducer;
         this.keepLoaded = keepLoaded;

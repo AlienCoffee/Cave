@@ -26,7 +26,7 @@ public class MainMenuScene extends AbstractScene {
         joinGameB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (joinGameB);
         joinGameB.setOnAction (ae -> {
-            ApplicationScene.GAME.show (app);
+            ApplicationScene.GAME_JOIN.show (app);
         });
         
         createGameB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
@@ -42,7 +42,6 @@ public class MainMenuScene extends AbstractScene {
     
     /*
     private void testConnection () {
-        System.setProperty ("javax.net.ssl.trustStore", "client.jks");
         //System.setProperty ("javax.net.ssl.trustStorePassword", "");
         
         try {

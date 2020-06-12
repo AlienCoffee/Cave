@@ -10,21 +10,21 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
-public class RunServer implements Closeable {
+public class CaveServer implements Closeable {
     
     public static final String SERVER_SALT = String.valueOf (new Random ().nextInt ());
     
     public static void main (String ... args) throws IOException, InterruptedException {
         System.setProperty ("javax.net.ssl.keyStore", "server.jks");
-        //System.setProperty ("javax.net.ssl.keyStorePassword", "");
+        
+        @SuppressWarnings ("resource")
+        final var server = new CaveServer ();
+        server.open (12763);
         
         System.out.println ("Server started"); // SYSOUT
-        @SuppressWarnings ("resource")
-        final var server = new RunServer ();
-        server.open (12763);
     }
     
-    private ConnectionsPool pool = new ConnectionsPool ();
+    private ConnectionsPool pool = new ConnectionsPool (this);
     private SSLServerSocket socket;
     private Thread acceptor;
     
@@ -50,7 +50,7 @@ public class RunServer implements Closeable {
                 
                 try {                        
                     final var client = (SSLSocket) socket.accept ();
-                    System.out.println ("Connection accepted"); // SYSOUT
+                    System.out.println ("New connection accepted"); // SYSOUT
                     pool.applyConnection (client);
                 } catch (SocketTimeoutException ste) {
                     // this is okey, it's need just to start new cycle loop to check interruption

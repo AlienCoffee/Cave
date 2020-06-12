@@ -27,10 +27,14 @@ public class Utils {
             final var digest = MessageDigest.getInstance ("SHA3-256");
             
             final var bytes = String.format ("%s-%s", string, salt).getBytes (StandardCharsets.UTF_8);
-            return new String (digest.digest (bytes), StandardCharsets.UTF_8);
+            return flatString (new String (digest.digest (bytes), StandardCharsets.UTF_8));
         } catch (NoSuchAlgorithmException nsae) {
             throw new IllegalStateException ();
         }
+    }
+    
+    public static String flatString (String string) {
+        return string.replaceAll ("(\n|\r)", " ");
     }
     
 }

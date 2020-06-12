@@ -1,5 +1,7 @@
 package ru.shemplo.cave.app.network;
 
+import static ru.shemplo.cave.app.network.NetworkCommand.*;
+
 import java.io.BufferedReader;
 import java.io.Closeable;
 import java.io.IOException;
@@ -9,7 +11,9 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.function.BiConsumer;
 
 import javax.net.ssl.HandshakeCompletedEvent;
 import javax.net.ssl.SSLSocket;
@@ -22,7 +26,7 @@ public class ClientConnection implements Closeable {
     
     private final SSLSocket socket;
     
-    private final String idh;
+    @Setter private String idh;
     private final int id;
     
     private final OutputStream os;
@@ -34,13 +38,20 @@ public class ClientConnection implements Closeable {
     @Setter
     private Runnable onHandshakeFinished;
     
-    @Getter
-    private boolean isAlive = true;
+    @Setter
+    private BiConsumer <String [], ClientConnection> onReadMessage;
     
-    public ClientConnection (int id, SSLSocket socket) throws IOException {
-        this.id = id; this.socket = socket; 
-        
-        idh = Utils.digest (String.valueOf (id), RunServer.SERVER_SALT);
+    @Setter @Getter
+    private boolean isAlive = true;
+    private long lastAliveTest;
+    
+    private final Thread readThread;
+    
+    @Setter @Getter
+    private String login;
+    
+    public ClientConnection (Integer id, SSLSocket socket) throws IOException {
+        this.id = id == null ? -1 : id.intValue (); this.socket = socket; 
         
         os = socket.getOutputStream ();
         w = new OutputStreamWriter (os, StandardCharsets.UTF_8);
@@ -49,55 +60,94 @@ public class ClientConnection implements Closeable {
         final var r = new InputStreamReader (is, StandardCharsets.UTF_8);
         br = new BufferedReader (r);
         
-        socket.addHandshakeCompletedListener (this::authorizeConnection);
+        readThread = new Thread (() -> {
+            while (!Thread.currentThread ().isInterrupted ()) {                
+                try {
+                    final var parts = Optional.ofNullable (br.readLine ())
+                        . map (MessageService::parseMessage).orElse (null);
+                    lastAliveTest = System.currentTimeMillis ();
+                    if (parts == null) { continue; }
+                    
+                    System.out.println ("Input: " + Arrays.toString (parts)); // SYSOUT
+                    if (idh == null || (parts.length > 0 && idh.equals (parts [0]))) {
+                        Optional.ofNullable (onReadMessage).ifPresent (h -> h.accept (parts, this));
+                    }
+                } catch (IOException ioe) {
+                    System.out.println ("Connection #" + id + " is over"); // SYSOUT
+                    isAlive = false;
+                }
+            }
+            
+            System.out.println ("Reading thread of #" + id + " is interrupted"); // SYSOUT
+            Thread.currentThread ().interrupt ();
+        });
+        
+        readThread.setDaemon (true);
+        
+        if (id != null) {
+            idh = Utils.digest (String.valueOf (id), CaveServer.SERVER_SALT);
+            socket.addHandshakeCompletedListener (this::authorizeConnection);
+        } else {
+            socket.addHandshakeCompletedListener (this::onHandshakeFinished);
+        }
     }
     
     public void startHandshake () throws IOException {
+        System.out.println ("Starting handshake with #" + id); // SYSOUT
         socket.startHandshake ();
     }
     
     private void authorizeConnection (HandshakeCompletedEvent hce) {
-        sendMessage (String.format ("identifier;%s", idh));
+        System.out.println ("Handshake with #" + id + " is finished");
+        sendMessage (IDENTIFIER.getValue ());
+        onHandshakeFinished (hce);
+    }
+    
+    private void onHandshakeFinished (HandshakeCompletedEvent hce) {
         Optional.ofNullable (onHandshakeFinished).ifPresent (Runnable::run);
+        readThread.start ();
     }
     
-    public void sendMessage (String message) {
+    private void sendPackedMessage (String message) {
         try {
-            w.write (message); w.write ("\n");
+            System.out.println ("Output: " + message); // SYSOUT
+            w.write (message); w.write ('\n'); 
             w.flush ();
+            
+            lastAliveTest = System.currentTimeMillis ();
         } catch (Exception ioe) {
-            System.out.println ("Connection #" + id + " has died"); // SYSOUT
+            System.out.println ("Connection #" + id + " is over"); // SYSOUT
             isAlive = false;
         }
     }
     
-    public Optional <String> readMessage () {
-        try {            
-            if (!br.ready ()) { return Optional.empty (); }
-            final var line = br.readLine ();
-            
-            final var idEnd = line.indexOf (';');
-            if (idEnd == -1) {
-                return Optional.empty ();
-            }
-            
-            // Check for authorization
-            final var identifier = line.substring (0, idEnd);
-            if (idh.equals (identifier)) {
-                return Optional.of (line.substring (idEnd + 1));
-            }
-            
-            return Optional.empty ();
-        } catch (IOException ioe) {
-            System.out.println ("Connection #" + id + " has died"); // SYSOUT
-            isAlive = false;
-            
-            return Optional.empty ();
+    public void sendMessage (String ... values) {
+        sendPackedMessage (MessageService.packMessage (idh, values));
+    }
+    
+    public long getNonTestedTime () {
+        return System.currentTimeMillis () - lastAliveTest;
+    }
+    
+    public boolean canBeRemoved () {
+        if (isAlive ()) { return false; }
+        
+        if (!isClosed) {
+            try   { close (); }
+            catch (IOException e) {}
         }
+        
+        return true;
     }
 
+    private boolean isClosed = false;
+    
     @Override
     public void close () throws IOException {
+        isClosed = true;
+        
+        System.out.println ("Closing #" + id); // SYSOUT
+        readThread.interrupt ();
         socket.close ();
     }
     

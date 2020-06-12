@@ -6,11 +6,16 @@ import javafx.scene.input.KeyCombination;
 import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import lombok.Getter;
+import lombok.Setter;
+import ru.shemplo.cave.app.network.ClientConnection;
 import ru.shemplo.cave.app.scenes.ApplicationScene;
 
 public class CaveApplication extends Application {
     
     @Getter private Stage stage;
+    
+    @Setter @Getter
+    private ClientConnection connection;
     
     @Override
     public void start (Stage stage) throws Exception {
