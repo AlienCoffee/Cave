@@ -11,7 +11,11 @@ public class RenderCell {
     
     private int x, y;
     
+    // client side only
     private Image image;
+    
+    // server side only
+    private char symbol;
     
     private Color effect;
     

@@ -10,22 +10,20 @@ import java.util.function.BiConsumer;
 
 import javafx.scene.paint.Color;
 import lombok.Getter;
-import ru.shemplo.cave.app.resources.LevelTextures;
+import ru.shemplo.cave.experimental.LevelGenerationContext;
 import ru.shemplo.cave.experimental.MazeGenerator;
 import ru.shemplo.cave.utils.IPoint;
 
 public class Level {
     
+    @Getter
+    private final LevelGenerationContext context;
+    
     private final LevelCell [][] map;
     
-    @Getter private int ix, iy;
-    
-    public Level () {
-        final var context = MazeGenerator.generateMaze (80, 80, 4);
+    public Level (int width, int height, int parts) {
+        context = MazeGenerator.generateMaze (width, height, parts);
         map = context.getMask ();
-        
-        ix = context.getSeeds ().get (0).X;
-        iy = context.getSeeds ().get (0).Y;
     }
     
     public boolean canStepOn (int x, int y) {
@@ -47,32 +45,34 @@ public class Level {
     private final Set <IPoint> visited = new HashSet <> ();
     
     private void runBFS (int fromX, int fromY, double maxDistance, BiConsumer <LevelCell, LevelCell> cellVisitor) {
-        if (fromX < 0 || fromY < 0 || fromY >= map.length || fromX >= map [fromY].length) { return; } 
-        queue.clear (); visited.clear ();
-        
-        final var fromPoint = IPoint.of (fromX, fromY);
-        queue.add (fromPoint); visited.add (fromPoint);
-        cellVisitor.accept (null, map [fromY][fromX]);
-        
-        //final var start = System.currentTimeMillis ();
-        while (!queue.isEmpty ()) {
-            final var point = queue.poll ();
-            final var cell = map [point.Y][point.X];
+        synchronized (queue) {            
+            if (fromX < 0 || fromY < 0 || fromY >= map.length || fromX >= map [fromY].length) { return; } 
+            queue.clear (); visited.clear ();
             
-            cell.getPassageNeighbours ().forEach (passage -> {
-                if (passage.F == null) { return; }
+            final var fromPoint = IPoint.of (fromX, fromY);
+            queue.add (fromPoint); visited.add (fromPoint);
+            cellVisitor.accept (null, map [fromY][fromX]);
+            
+            //final var start = System.currentTimeMillis ();
+            while (!queue.isEmpty ()) {
+                final var point = queue.poll ();
+                final var cell = map [point.Y][point.X];
                 
-                final var nei = passage.F.getAnother (cell);
-                final var neiPoint = nei.getPoint (point.D + 1);
-                if (fromPoint.distance (neiPoint) > maxDistance || neiPoint.D > maxDistance || visited.contains (neiPoint)) {
-                    return; // too far or already visited
-                }
-                
-                visited.add (neiPoint);
-                queue.add (neiPoint);
-                
-                cellVisitor.accept (cell, nei);
-            });
+                cell.getPassageNeighbours ().forEach (passage -> {
+                    if (passage.F == null) { return; }
+                    
+                    final var nei = passage.F.getAnother (cell);
+                    final var neiPoint = nei.getPoint (point.D + 1);
+                    if (fromPoint.distance (neiPoint) > maxDistance || neiPoint.D > maxDistance || visited.contains (neiPoint)) {
+                        return; // too far or already visited
+                    }
+                    
+                    visited.add (neiPoint);
+                    queue.add (neiPoint);
+                    
+                    cellVisitor.accept (cell, nei);
+                });
+            }
         }
         //final var end = System.currentTimeMillis ();
         //System.out.println ("BFS Duration: " + (end - start)); // SYSOUT
@@ -81,7 +81,7 @@ public class Level {
     public List <RenderCell> getVisibleCells (int x, int y, double illumination) {
         final var list = new ArrayList <RenderCell> ();
         
-        runBFS (x, y, 10.0, (__, point) -> {
+        runBFS (x, y, illumination, (__, point) -> {
             final int px = (int) point.getX ();
             final int py = (int) point.getY ();
             list.add (getCellSafe (px, py, px - x, py - y));            
@@ -125,16 +125,17 @@ public class Level {
     
     private RenderCell getCellSafe (int x, int y, int rx, int ry) {
         if (y < 0 || y >= map.length || x < 0 || x >= map [y].length) {
-            return RenderCell.builder ().x (rx).y (ry).image (LevelTextures.symbol2texture.get (' '))
-                 . subpart (map [y][x].getSubpart ())
+            return RenderCell.builder ().x (rx).y (ry)//.image (LevelTextures.symbol2texture.get (' '))
+                 . subpart (map [y][x].getSubpart ()).symbol (' ')
                  . effect (Color.BLACK).build ();
         }
         
         //final var distance = Math.sqrt (rx * rx + ry * ry);
         return RenderCell.builder ().x (rx).y (ry)
-             . image (LevelTextures.symbol2texture.get (map [y][x].getSymbol ()))
+             //. image (LevelTextures.symbol2texture.get (map [y][x].getSymbol ()))
              . subpart (map [y][x].getSubpart ())
              . effect (Color.gray (0.025, 1.0))
+             . symbol (map [y][x].getSymbol ())
              . build ();
     }
     

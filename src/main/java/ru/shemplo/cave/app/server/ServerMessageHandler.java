@@ -1,6 +1,6 @@
-package ru.shemplo.cave.app.network;
+package ru.shemplo.cave.app.server;
 
-import static ru.shemplo.cave.app.network.NetworkCommand.*;
+import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
 import java.util.Objects;
 import java.util.stream.Collectors;
@@ -41,7 +41,14 @@ public class ServerMessageHandler {
             }
             
             connection.sendMessage (PLAYER_READY.getValue ());
+            if (pool.getState () == ServerState.WAITIN_FOR_PLAYERS) {
+                pool.getContext ().applyMove (connection, 0, 0);
+            }
+            
             pool.deltaCountdown (1);
+        } else if (PLAYER_MOVE.getValue ().equals (parts [1])) {
+            final int dx = Integer.parseInt (parts [2]), dy = Integer.parseInt (parts [3]);
+            pool.getContext ().applyMove (connection, dx, dy);
         }
     }
     

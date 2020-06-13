@@ -1,7 +1,7 @@
-package ru.shemplo.cave.app.network;
+package ru.shemplo.cave.app.server;
 
-import static ru.shemplo.cave.app.network.NetworkCommand.*;
-import static ru.shemplo.cave.app.network.ServerState.*;
+import static ru.shemplo.cave.app.server.NetworkCommand.*;
+import static ru.shemplo.cave.app.server.ServerState.*;
 
 import java.io.Closeable;
 import java.io.IOException;
@@ -61,6 +61,7 @@ public class ConnectionsPool implements Closeable {
     
     private final AtomicInteger countdown = new AtomicInteger ();
     private volatile int alive = 0, players = 0;
+    @Getter private GameContext context;
     
     public void open () {
         listener = new Thread (() -> {
@@ -98,7 +99,14 @@ public class ConnectionsPool implements Closeable {
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         state = ServerState.PRE_SATRT;
                         players = countdown.get ();
-                        countdown.set (3);
+                        countdown.set (5);
+                        
+                        final var generatorThread = new Thread (() -> {
+                            context = new GameContext (this, connections);
+                            System.out.println ("Context is generated"); // SYSOUT
+                        });
+                        generatorThread.setDaemon (true);
+                        generatorThread.start ();
                     }
                     
                     try { Thread.sleep (500); } catch (InterruptedException ie) { 

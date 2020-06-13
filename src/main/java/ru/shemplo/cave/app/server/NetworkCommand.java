@@ -1,4 +1,4 @@
-package ru.shemplo.cave.app.network;
+package ru.shemplo.cave.app.server;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
@@ -21,7 +21,11 @@ public enum NetworkCommand {
     
     PLAYER_READY ("player ready"),
     
-    SERVER_STATE ("server state")
+    SERVER_STATE ("server state"),
+    
+    PLAYER_MOVE ("player move"),
+    PLAYER_LOCATION ("player location"),
+    PLAYERS_LOCATION ("players location")
     
     ;
     

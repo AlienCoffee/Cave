@@ -1,6 +1,6 @@
-package ru.shemplo.cave.app.network;
+package ru.shemplo.cave.app.server;
 
-import static ru.shemplo.cave.app.network.NetworkCommand.*;
+import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
 import java.io.BufferedReader;
 import java.io.Closeable;
@@ -26,7 +26,7 @@ public class ClientConnection implements Closeable {
     private final SSLSocket socket;
     
     @Setter private String idh;
-    private final int id;
+    @Getter private final int id;
     
     private final OutputStream os;
     private final Writer w;
@@ -108,6 +108,7 @@ public class ClientConnection implements Closeable {
     
     private void sendPackedMessage (String message) {
         try {
+            //System.out.println ("Out: " + message); // SYSOUT
             w.write (message); w.write ('\n'); 
             w.flush ();
             

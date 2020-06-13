@@ -2,7 +2,7 @@ package ru.shemplo.cave.app.scenes;
 
 
 
-import static ru.shemplo.cave.app.network.NetworkCommand.*;
+import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
 import java.io.IOException;
 import java.util.Optional;
@@ -14,7 +14,7 @@ import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.layout.VBox;
 import ru.shemplo.cave.app.CaveApplication;
-import ru.shemplo.cave.app.network.ClientConnection;
+import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.styles.SizeStyles;
 
 public class GameSettingsScene extends AbstractScene {

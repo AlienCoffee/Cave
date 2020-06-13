@@ -1,8 +1,11 @@
 package ru.shemplo.cave.app.scenes;
 
-import static ru.shemplo.cave.app.network.NetworkCommand.*;
+import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
+import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
+import java.util.stream.Collectors;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
@@ -22,8 +25,12 @@ import javafx.util.Duration;
 import ru.shemplo.cave.app.CaveApplication;
 import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.Level;
-import ru.shemplo.cave.app.network.ClientConnection;
-import ru.shemplo.cave.app.network.ServerState;
+import ru.shemplo.cave.app.entity.level.RenderCell;
+import ru.shemplo.cave.app.entity.level.RenderGate;
+import ru.shemplo.cave.app.resources.LevelTextures;
+import ru.shemplo.cave.app.server.ClientConnection;
+import ru.shemplo.cave.app.server.ServerState;
+import ru.shemplo.cave.utils.IPoint;
 
 public class GameScene extends AbstractScene {
     
@@ -55,6 +62,61 @@ public class GameScene extends AbstractScene {
             if (serverState == ServerState.RECRUITING) {
                 app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
                 ApplicationScene.MAIN_MENU.show (app);
+            } else if (serverState == ServerState.GAME) {
+                startGame ();
+            }
+        } else if (PLAYER_LOCATION.getValue ().equals (parts [1])) {
+            mx = Integer.parseInt (parts [2]); my = Integer.parseInt (parts [3]);
+            
+            final var cells = Arrays.stream (parts [4].split ("@"))
+                . filter (str -> !str.isEmpty ())
+                . map (str -> str.split (",")).map (cd -> {
+                    final var dx = Integer.parseInt (cd [0]);
+                    final var dy = Integer.parseInt (cd [1]);
+                    
+                    final var cs = cd [2].charAt (0);
+                    final var image = LevelTextures.symbol2texture.get (cs);
+                    
+                    return RenderCell.builder ().x (dx).y (dy).image (image).build ();
+                }).collect (Collectors.toList ());
+            
+            final var gates = Arrays.stream (parts [5].split ("@"))
+                . filter (str -> !str.isEmpty ())
+                . map (str -> str.split (",")).map (cd -> {
+                    final var dx = Double.parseDouble (cd [0]);
+                    final var dy = Double.parseDouble (cd [1]);
+                    final var isVertical = Boolean.parseBoolean (cd [2]);
+                    final var type = GateType.valueOf (cd [3]);
+                    final var isClosed = Boolean.parseBoolean (cd [4]);
+                    
+                    return RenderGate.builder ().x (dx).y (dy).vertical (isVertical)
+                         . type (type).closed (isClosed).build ();
+                }).collect (Collectors.toList ());
+            
+            synchronized (visibleCells) {
+                visibleCells.clear ();
+                visibleCells.addAll (cells);
+            }
+            
+            synchronized (visibleGates) {
+                visibleGates.clear ();
+                visibleGates.addAll (gates);
+            }
+        } else if (PLAYERS_LOCATION.getValue ().equals (parts [1])) {
+            mx = Integer.parseInt (parts [2]); my = Integer.parseInt (parts [3]);
+            
+            final var players = Arrays.stream (parts [4].split ("@"))
+                . filter (str -> !str.isEmpty ())
+                . map (str -> str.split (",")).map (cd -> {
+                    final var dx = Integer.parseInt (cd [0]);
+                    final var dy = Integer.parseInt (cd [1]);
+                    
+                    return IPoint.of (dx, dy);
+                }).collect (Collectors.toList ());
+            
+            synchronized (visiblePlayers) {
+                visiblePlayers.clear ();
+                visiblePlayers.addAll (players);
             }
         }
     }
@@ -85,48 +147,30 @@ public class GameScene extends AbstractScene {
 
     @Override
     public void onVisible () {
-        applyCss (); layout ();
-        
-        final var level = new Level ();
-        startGame (level);
-        
+        applyCss (); layout ();        
         canvasC.requestFocus ();
     }
     
-    private Level level;
-    
-    private int mx = 0, my = 0;
-    
-    public void startGame (Level level) {
-        this.level = level;
-     
-        mx = level.getIx (); my = level.getIy ();
+    public void startGame () {
+        final var connection = app.getConnection ();
         app.getStage ().getScene ().setOnKeyPressed (ke -> {
             if (serverState != ServerState.GAME) { return; }
             
             switch (ke.getCode ()) {
                 case W: {
-                    if (ke.isShiftDown ()) {
-                        my -= 1;
-                    } else if (level.canStepOnFrom (0, -1, mx, my)) { my -= 1; }
+                    connection.sendMessage (PLAYER_MOVE.getValue (), "0", "-1");
                 } break;
                 case A: {
-                    if (ke.isShiftDown ()) {
-                        mx -= 1;
-                    } else if (level.canStepOnFrom (-1, 0, mx, my)) { mx -= 1; }
+                    connection.sendMessage (PLAYER_MOVE.getValue (), "-1", "0");
                 } break;
                 case S: {
-                    if (ke.isShiftDown ()) {
-                        my += 1;
-                    } else if (level.canStepOnFrom (0, +1, mx, my)) { my += 1; }
+                    connection.sendMessage (PLAYER_MOVE.getValue (), "0", "1");
                 } break;
                 case D: {
-                    if (ke.isShiftDown ()) {
-                        mx += 1;
-                    } else if (level.canStepOnFrom (+1, 0, mx, my)) { mx += 1; }
+                    connection.sendMessage (PLAYER_MOVE.getValue (), "1", "0");
                 } break;
                 case ENTER: {
-                    level.openGates (mx, my);
+                    //level.openGates (mx, my);
                 } break;
                 
                 default: break;
@@ -158,6 +202,11 @@ public class GameScene extends AbstractScene {
         Color.BROWN, Color.LIME, Color.BLACK, Color.TOMATO, Color.CADETBLUE
     );
     
+    private List <RenderCell> visibleCells = new ArrayList <> ();
+    private List <RenderGate> visibleGates = new ArrayList <> ();
+    private List <IPoint> visiblePlayers = new ArrayList <> ();
+    private int mx = -1, my = -1;
+    
     private void render () {
         //final var size = level.getSize ();
         
@@ -171,16 +220,14 @@ public class GameScene extends AbstractScene {
             ctx.setFill (Color.YELLOW);
             ctx.fillText ("Waiting for players", 20, 40);
         } else if (serverState == ServerState.GAME) {
-            final int px = mx, py = my;
-            
-            level.getVisibleCells (px, py, 1.0).forEach (cell -> {
+            visibleCells.forEach (cell -> {
                 ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
                 
                 ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
                 ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 10, 10);
             });
             
-            level.getVisibleGates (px, py).forEach (gate -> {
+            visibleGates.forEach (gate -> {
                 ctx.setFill (gate.getType () == GateType.GATE 
                         ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
                                 : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
@@ -190,6 +237,10 @@ public class GameScene extends AbstractScene {
                 } else {                
                     ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
                 }
+            });
+            
+            visiblePlayers.forEach (player -> {
+                ctx.drawImage (GameScene.player, cx + player.X * ts - 10, cy + player.Y * ts - 20, 20, 40);
             });
             
             ctx.drawImage (player, cx - 10, cy - 20, 20, 40);

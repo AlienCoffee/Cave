@@ -7,8 +7,8 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import lombok.Getter;
 import lombok.Setter;
-import ru.shemplo.cave.app.network.ClientConnection;
 import ru.shemplo.cave.app.scenes.ApplicationScene;
+import ru.shemplo.cave.app.server.ClientConnection;
 
 public class CaveApplication extends Application {
     

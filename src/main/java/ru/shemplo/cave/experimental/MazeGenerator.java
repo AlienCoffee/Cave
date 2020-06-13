@@ -213,7 +213,9 @@ public class MazeGenerator {
         
         seedsGenerator:
         while (seeds.size () < parts) {
-            final int x = r.nextInt (size), y = r.nextInt (size);
+            final int y = r.nextInt (maze.length);
+            final int x = r.nextInt (maze [y].length);
+            
             for (var seed : seeds) {
                 if (Math.abs (seed.F - x) <= 2 || Math.abs (seed.S - y) <= 2
                         || x < 1 || y < 1 || x >= size - 1 || y >= size - 1) {

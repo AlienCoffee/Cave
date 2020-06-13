@@ -1,4 +1,4 @@
-package ru.shemplo.cave.app.network;
+package ru.shemplo.cave.app.server;
 
 import java.io.Closeable;
 import java.io.IOException;
