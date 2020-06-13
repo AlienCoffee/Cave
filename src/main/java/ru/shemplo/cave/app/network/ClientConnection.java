@@ -11,7 +11,6 @@ import java.io.OutputStream;
 import java.io.OutputStreamWriter;
 import java.io.Writer;
 import java.nio.charset.StandardCharsets;
-import java.util.Arrays;
 import java.util.Optional;
 import java.util.function.BiConsumer;
 
@@ -61,14 +60,13 @@ public class ClientConnection implements Closeable {
         br = new BufferedReader (r);
         
         readThread = new Thread (() -> {
-            while (!Thread.currentThread ().isInterrupted ()) {                
+            while (!Thread.currentThread ().isInterrupted () && isAlive) {                
                 try {
                     final var parts = Optional.ofNullable (br.readLine ())
                         . map (MessageService::parseMessage).orElse (null);
+                    if (parts == null) { throw new IOException (); }
                     lastAliveTest = System.currentTimeMillis ();
-                    if (parts == null) { continue; }
                     
-                    System.out.println ("Input: " + Arrays.toString (parts)); // SYSOUT
                     if (idh == null || (parts.length > 0 && idh.equals (parts [0]))) {
                         Optional.ofNullable (onReadMessage).ifPresent (h -> h.accept (parts, this));
                     }
@@ -110,7 +108,6 @@ public class ClientConnection implements Closeable {
     
     private void sendPackedMessage (String message) {
         try {
-            System.out.println ("Output: " + message); // SYSOUT
             w.write (message); w.write ('\n'); 
             w.flush ();
             
@@ -129,10 +126,12 @@ public class ClientConnection implements Closeable {
         return System.currentTimeMillis () - lastAliveTest;
     }
     
-    public boolean canBeRemoved () {
+    public boolean canBeRemoved (ConnectionsPool pool) {
         if (isAlive ()) { return false; }
         
         if (!isClosed) {
+            pool.broadcastMessage (LEAVE_LOBBY.getValue (), getLogin ());
+            
             try   { close (); }
             catch (IOException e) {}
         }

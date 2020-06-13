@@ -24,6 +24,7 @@ public class CaveApplication extends Application {
         stage.setFullScreenExitKeyCombination (KeyCombination.NO_MATCH);
         stage.setFullScreenExitHint ("");
         stage.setTitle ("The Cave");
+        stage.setMinWidth (600);
         //stage.setFullScreen (true);
         //stage.setResizable (false);
         

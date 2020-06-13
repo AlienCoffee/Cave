@@ -34,6 +34,14 @@ public class ServerMessageHandler {
                 if (!c.isAlive ()) { return; }
                 c.sendMessage (LEAVE_LOBBY.getValue (), login);
             });
+        } else if (PLAYER_READY.getValue ().equals (parts [1])) {
+            if (pool.getState () != ServerState.WAITIN_FOR_PLAYERS
+                    && pool.getState () != ServerState.RECRUITING) {
+                return; // wrong state of server for this command
+            }
+            
+            connection.sendMessage (PLAYER_READY.getValue ());
+            pool.deltaCountdown (1);
         }
     }
     

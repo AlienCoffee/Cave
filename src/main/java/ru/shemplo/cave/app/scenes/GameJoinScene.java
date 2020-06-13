@@ -57,6 +57,7 @@ public class GameJoinScene extends AbstractScene {
         });
         
         menuBox.getChildren ().add (messageL);
+        messageL.setWrapText (true);
         
         backB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (backB);

@@ -1,9 +1,12 @@
 package ru.shemplo.cave.app.scenes;
 
+import static ru.shemplo.cave.app.network.NetworkCommand.*;
+
 import java.util.List;
 
 import javafx.animation.KeyFrame;
 import javafx.animation.Timeline;
+import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
@@ -19,6 +22,8 @@ import javafx.util.Duration;
 import ru.shemplo.cave.app.CaveApplication;
 import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.Level;
+import ru.shemplo.cave.app.network.ClientConnection;
+import ru.shemplo.cave.app.network.ServerState;
 
 public class GameScene extends AbstractScene {
     
@@ -31,6 +36,27 @@ public class GameScene extends AbstractScene {
         super (app);
         
         initView ();
+        
+        app.getConnection ().setOnReadMessage (this::handleMessage);
+        app.getConnection ().sendMessage (PLAYER_READY.getValue ());
+    }
+    
+    private ServerState serverState = ServerState.WAITIN_FOR_PLAYERS;
+    private int countdown = -1;
+    
+    private void handleMessage (String [] parts, ClientConnection connection) {
+        if (START_COUNTDOWN.getValue ().equals (parts [1])) {
+            Platform.runLater (() -> { backB.setDisable (true); });
+        } else if (COUNTDOWN.getValue ().equals (parts [1])) {
+            countdown = Integer.parseInt (parts [2]);
+        } else if (SERVER_STATE.getValue ().equals (parts [1])) {
+            serverState = ServerState.valueOf (parts [2]);
+            
+            if (serverState == ServerState.RECRUITING) {
+                app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
+                ApplicationScene.MAIN_MENU.show (app);
+            }
+        }
     }
     
     protected void initView () {
@@ -39,6 +65,7 @@ public class GameScene extends AbstractScene {
         
         menuBox.getChildren ().add (backB);
         backB.setOnAction (ae -> {
+            app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
             ApplicationScene.MAIN_MENU.show (app);
         });
         
@@ -75,6 +102,8 @@ public class GameScene extends AbstractScene {
      
         mx = level.getIx (); my = level.getIy ();
         app.getStage ().getScene ().setOnKeyPressed (ke -> {
+            if (serverState != ServerState.GAME) { return; }
+            
             switch (ke.getCode ()) {
                 case W: {
                     if (ke.isShiftDown ()) {
@@ -138,32 +167,39 @@ public class GameScene extends AbstractScene {
         ctx.setFill (Color.BLACK);
         ctx.fillRect (0, 0, cw, ch);
         
-        final int px = mx, py = my;
-        
-        level.getVisibleCells (px, py, 1.0).forEach (cell -> {
-            ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
+        if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
+            ctx.setFill (Color.YELLOW);
+            ctx.fillText ("Waiting for players", 20, 40);
+        } else if (serverState == ServerState.GAME) {
+            final int px = mx, py = my;
             
-            ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
-            ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 10, 10);
-        });
-        
-        level.getVisibleGates (px, py).forEach (gate -> {
-            ctx.setFill (gate.getType () == GateType.GATE 
-                            ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
-                            : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
+            level.getVisibleCells (px, py, 1.0).forEach (cell -> {
+                ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
+                
+                ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
+                ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 10, 10);
+            });
+            
+            level.getVisibleGates (px, py).forEach (gate -> {
+                ctx.setFill (gate.getType () == GateType.GATE 
+                        ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
+                                : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
                         );
-            if (gate.isVertical ()) {                
-                ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
-            } else {                
-                ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
-            }
-        });
+                if (gate.isVertical ()) {                
+                    ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
+                } else {                
+                    ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
+                }
+            });
+            
+            ctx.drawImage (player, cx - 10, cy - 20, 20, 40);
+            
+            ctx.setFill (Color.YELLOW);
+            ctx.fillText ("X: " + mx, 20, 40);
+            ctx.fillText ("Y: " + my, 20, 55);
+            ctx.fillText ("Rest time: " + countdown, 20, 70);
+        }
         
-        ctx.drawImage (player, cx - 10, cy - 20, 20, 40);
-        
-        ctx.setFill (Color.YELLOW);
-        ctx.fillText ("X: " + mx, 20, 40);
-        ctx.fillText ("Y: " + my, 20, 55);
     }
     
 }
