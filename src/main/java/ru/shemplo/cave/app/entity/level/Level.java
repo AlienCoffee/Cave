@@ -4,6 +4,7 @@ import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Set;
 import java.util.function.BiConsumer;
@@ -24,6 +25,38 @@ public class Level {
     public Level (int width, int height, int parts) {
         context = MazeGenerator.generateMaze (width, height, parts);
         map = context.getMask ();
+        
+        System.out.println ("Maze mask:"); // SYSOUT
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                if (map [i][j].getPart () == 1) {
+                    System.out.print ("█"); // SYSOUT
+                } else if (map [i][j].getPart () == 2) {
+                    System.out.print ("▒"); // SYSOUT
+                } else if (map [i][j].getPart () == 3) {
+                    System.out.print ("▓"); // SYSOUT
+                } else if (map [i][j].getPart () == 4) {
+                    System.out.print ("░"); // SYSOUT
+                } else if (map [i][j].getPart () == 5) {
+                    System.out.print ("|"); // SYSOUT
+                } else {
+                    System.out.print (map [i][j].getPart ()); // SYSOUT
+                }
+            }
+            System.out.println (); // SYSOUT
+        }
+        
+        System.out.println ("Maze:"); // SYSOUT
+        for (int i = 0; i < height; i++) {
+            for (int j = 0; j < width; j++) {
+                if (map [i][j].getPart () > 0 && map [i][j].getSubpart () > 0) {                    
+                    System.out.print (map [i][j].getSymbol ()); // SYSOUT
+                } else {
+                    System.out.print (" "); // SYSOUT
+                }
+            }
+            System.out.println (); // SYSOUT
+        }
     }
     
     public boolean canStepOn (int x, int y) {
@@ -78,22 +111,38 @@ public class Level {
         //System.out.println ("BFS Duration: " + (end - start)); // SYSOUT
     }
     
-    public List <RenderCell> getVisibleCells (int x, int y, double illumination) {
-        final var list = new ArrayList <RenderCell> ();
+    public List <LevelCell> getVisibleCells (int x, int y, double illumination) {
+        final var list = new ArrayList <LevelCell> ();
         
-        runBFS (x, y, illumination, (__, point) -> {
-            final int px = (int) point.getX ();
-            final int py = (int) point.getY ();
-            list.add (getCellSafe (px, py, px - x, py - y));            
+        runBFS (x, y, illumination, (__, cell) -> {
+            //list.add (getCellSafe (px, py, px - x, py - y));
+            list.add (cell);
         });
         
+        System.out.println ("Maze:"); // SYSOUT
+        for (int i = 0; i < map.length; i++) {
+            for (int j = 0; j < map [i].length; j++) {
+                if (i == y && j == x) {
+                    System.out.print ("&"); // SYSOUT
+                } else {                    
+                    if (map [i][j].getPart () > 0 && map [i][j].getSubpart () > 0) {                    
+                        System.out.print (map [i][j].getSymbol ()); // SYSOUT
+                    } else {
+                        System.out.print (" "); // SYSOUT
+                    }
+                }
+            }
+            System.out.println (); // SYSOUT
+        }
+        
+        System.out.println (list); // SYSOUT
         return list;
     }
     
-    public List <RenderGate> getVisibleGates (int x, int y) {
+    public List <RenderGate> getVisibleGates (int x, int y, double illumination) {
         final var gs = new ArrayList <RenderGate> ();
         
-        runBFS (x, y, 10.0, (__, point) -> {
+        runBFS (x, y, illumination, (__, point) -> {
             final int px = (int) point.getX ();
             final int py = (int) point.getY ();
             final var cell = map [py][px];
@@ -123,6 +172,7 @@ public class Level {
         return gs;
     }
     
+    @SuppressWarnings ("unused")
     private RenderCell getCellSafe (int x, int y, int rx, int ry) {
         if (y < 0 || y >= map.length || x < 0 || x >= map [y].length) {
             return RenderCell.builder ().x (rx).y (ry)//.image (LevelTextures.symbol2texture.get (' '))
@@ -139,16 +189,18 @@ public class Level {
              . build ();
     }
     
-    public void openGates (int x, int y) {
+    public void toggleTumbler (int x, int y) {
         if (x < 0 || y < 0 || y >= map.length || x >= map [y].length) { return; } 
-        final var cell = map [y][x];
-        
-        cell.getPassageNeighbours ().forEach (neiNoffset -> {
-            if (neiNoffset.F == null || neiNoffset.F.getGateType () != GateType.GATE) { 
-                return; 
-            }
+        Optional.ofNullable (map [y][x].getTumbler ()).ifPresent (tum -> {
+            tum.setActive (!tum.isActive ());
             
-            neiNoffset.F.setClosed (!neiNoffset.F.isClosed ());
+            tum.getOpen ().forEach (gate -> {
+                gate.setClosed (!tum.isActive ());
+            });
+            
+            tum.getClose ().forEach (gate -> {
+                gate.setClosed (tum.isActive ());
+            });
         });
     }
     

@@ -11,7 +11,6 @@ import ru.shemplo.cave.app.entity.level.Level;
 
 public class GameContext {
     
-    @SuppressWarnings ("unused")
     private final ConnectionsPool pool;
     
     private final Level level;
@@ -49,7 +48,7 @@ public class GameContext {
         
         int px = id2px.getOrDefault (id, -1), py = id2py.getOrDefault (id, -1);
         if (dx != 0 || dy != 0) {
-            if (!level.canStepOnFrom (dx, dy, px, py)) { return; }
+            //if (!level.canStepOnFrom (dx, dy, px, py)) { return; }
             
             px = id2px.compute (id, (__, v) -> v + dx);
             py = id2py.compute (id, (__, v) -> v + dy);
@@ -63,20 +62,30 @@ public class GameContext {
         
         visibleCells.forEach (cell -> {
             final var symbol = String.valueOf (cell.getSymbol ());
-            final String cx = String.valueOf (cell.getX ()), 
-                         cy = String.valueOf (cell.getY ());
+            final String cx = String.valueOf (cell.getX () - x), 
+                         cy = String.valueOf (cell.getY () - y);
             cellsJoiner.add (String.join (",", cx, cy, symbol));
         });
         
         final var gatesJoiner = new StringJoiner ("@");
         gatesJoiner.add (""); gatesJoiner.add ("");
-        level.getVisibleGates (px, py).forEach (gate -> {
+        level.getVisibleGates (px, py, 2.0).forEach (gate -> {
             final var vertical = String.valueOf (gate.isVertical ());
             final var closed = String.valueOf (gate.isClosed ());
             final var type = String.valueOf (gate.getType ());
             final String cx = String.valueOf (gate.getX ()), 
                          cy = String.valueOf (gate.getY ());
             gatesJoiner.add (String.join (",", cx, cy, vertical, type, closed));
+        });
+        
+        final var tumblersJoiner = new StringJoiner ("@");
+        tumblersJoiner.add (""); tumblersJoiner.add ("");
+        visibleCells.forEach (cell -> {
+            if (cell.getTumbler () == null) { return; }
+            final var active = String.valueOf (cell.getTumbler ().isActive ());
+            final String cx = String.valueOf (cell.getX () - x), 
+                         cy = String.valueOf (cell.getY () - y);
+            tumblersJoiner.add (String.join (",", cx, cy, active));
         });
         
         final var playersJoiner = new StringJoiner ("@");
@@ -97,8 +106,22 @@ public class GameContext {
         }
         
         final String sx = String.valueOf (x), sy = String.valueOf (y); 
-        connection.sendMessage (PLAYER_LOCATION.getValue (), sx, sy, cellsJoiner.toString (), gatesJoiner.toString ());
+        connection.sendMessage (PLAYER_LOCATION.getValue (), sx, sy, cellsJoiner.toString (), 
+                gatesJoiner.toString (), tumblersJoiner.toString ());
         connection.sendMessage (PLAYERS_LOCATION.getValue (), sx, sy, playersJoiner.toString ());
+    }
+    
+    public void applyAction (ClientConnection connection, String action) {
+        final var id = connection.getId ();
+        
+        final int px = id2px.getOrDefault (id, -1), py = id2py.getOrDefault (id, -1);
+        if ("tumbler".equals (action)) {
+            level.toggleTumbler (px, py);
+        }
+        
+        pool.getConnections ().forEach (c -> {            
+            applyMove (c, 0, 0, true);
+        });
     }
     
 }

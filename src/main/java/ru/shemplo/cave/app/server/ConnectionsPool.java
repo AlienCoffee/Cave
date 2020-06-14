@@ -66,7 +66,7 @@ public class ConnectionsPool implements Closeable {
     public void open () {
         listener = new Thread (() -> {
             while (!Thread.currentThread ().isInterrupted ()) {
-                try { Thread.sleep (1000); } catch (InterruptedException ie) {
+                try { Thread.sleep (500); } catch (InterruptedException ie) {
                     Thread.currentThread ().interrupt ();
                     return; // the work is over
                 }
@@ -74,7 +74,7 @@ public class ConnectionsPool implements Closeable {
                 alive = 0;
                 synchronized (connections) {
                     for (final var connection : connections) {
-                        if (connection.getNonTestedTime () > 1000) {                            
+                        if (connection.getNonTestedTime () > 500) {                            
                             connection.sendMessage (PING.getValue ());
                         }
                         

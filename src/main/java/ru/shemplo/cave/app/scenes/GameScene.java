@@ -27,6 +27,7 @@ import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.Level;
 import ru.shemplo.cave.app.entity.level.RenderCell;
 import ru.shemplo.cave.app.entity.level.RenderGate;
+import ru.shemplo.cave.app.entity.level.RenderTumbler;
 import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.server.ServerState;
@@ -93,6 +94,16 @@ public class GameScene extends AbstractScene {
                          . type (type).closed (isClosed).build ();
                 }).collect (Collectors.toList ());
             
+            final var tumblers = Arrays.stream (parts [6].split ("@"))
+                . filter (str -> !str.isEmpty ())
+                . map (str -> str.split (",")).map (cd -> {
+                    final var dx = Integer.parseInt (cd [0]);
+                    final var dy = Integer.parseInt (cd [1]);
+                    final var isActive = Boolean.parseBoolean (cd [2]);
+                    
+                    return RenderTumbler.builder ().x (dx).y (dy).active (isActive).build ();
+                }).collect (Collectors.toList ());
+            
             synchronized (visibleCells) {
                 visibleCells.clear ();
                 visibleCells.addAll (cells);
@@ -101,6 +112,11 @@ public class GameScene extends AbstractScene {
             synchronized (visibleGates) {
                 visibleGates.clear ();
                 visibleGates.addAll (gates);
+            }
+            
+            synchronized (visibleTumblers) {
+                visibleTumblers.clear ();
+                visibleTumblers.addAll (tumblers);
             }
         } else if (PLAYERS_LOCATION.getValue ().equals (parts [1])) {
             mx = Integer.parseInt (parts [2]); my = Integer.parseInt (parts [3]);
@@ -170,7 +186,7 @@ public class GameScene extends AbstractScene {
                     connection.sendMessage (PLAYER_MOVE.getValue (), "1", "0");
                 } break;
                 case ENTER: {
-                    //level.openGates (mx, my);
+                    connection.sendMessage (PLAYER_ACTION.getValue (), "tumbler");
                 } break;
                 
                 default: break;
@@ -202,6 +218,7 @@ public class GameScene extends AbstractScene {
         Color.BROWN, Color.LIME, Color.BLACK, Color.TOMATO, Color.CADETBLUE
     );
     
+    private List <RenderTumbler> visibleTumblers = new ArrayList <> ();
     private List <RenderCell> visibleCells = new ArrayList <> ();
     private List <RenderGate> visibleGates = new ArrayList <> ();
     private List <IPoint> visiblePlayers = new ArrayList <> ();
@@ -237,6 +254,12 @@ public class GameScene extends AbstractScene {
                 } else {                
                     ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
                 }
+            });
+            
+            visibleTumblers.forEach (tumbler -> {
+                ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
+                
+                ctx.fillRect (cx + (tumbler.getX () - 0.5) * ts + 25, cy + (tumbler.getY () - 0.5) * ts + 25, 15, 15);
             });
             
             visiblePlayers.forEach (player -> {

@@ -49,6 +49,8 @@ public class ServerMessageHandler {
         } else if (PLAYER_MOVE.getValue ().equals (parts [1])) {
             final int dx = Integer.parseInt (parts [2]), dy = Integer.parseInt (parts [3]);
             pool.getContext ().applyMove (connection, dx, dy);
+        } else if (PLAYER_ACTION.getValue ().equals (parts [1])) {
+            pool.getContext ().applyAction (connection, parts [2]);
         }
     }
     

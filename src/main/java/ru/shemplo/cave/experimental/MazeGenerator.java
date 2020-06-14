@@ -7,6 +7,7 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Map;
 import java.util.Optional;
 import java.util.Random;
 import java.util.Set;
@@ -21,6 +22,7 @@ import java.util.stream.IntStream;
 import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.LevelCell;
 import ru.shemplo.cave.app.entity.level.LevelPassage;
+import ru.shemplo.cave.app.entity.level.LevelTumbler;
 import ru.shemplo.cave.utils.IPoint;
 import ru.shemplo.cave.utils.Utils;
 import ru.shemplo.snowball.stuctures.Pair;
@@ -30,7 +32,7 @@ public class MazeGenerator {
     
     private static final Random r = new Random (1L);
     
-    private static final int parts = 4;
+    private static final int parts = 2;
     private static final int size = parts * 20;
     
     public static void main (String ... args) {
@@ -62,7 +64,7 @@ public class MazeGenerator {
         System.out.println ("Maze:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 1 && maze [i][j].getSubpart () == 1) {                    
+                if (maze [i][j].getPart () == 1 && maze [i][j].getSubpart () > 0) {                    
                     System.out.print (maze [i][j].getSymbol ()); // SYSOUT
                 } else {
                     System.out.print (" "); // SYSOUT
@@ -106,6 +108,7 @@ public class MazeGenerator {
         context = generateCyclesWithinSubparts (context, 23);
         context = generateGatesBetweenSubparts (context);
         context = generateSlitsBetweenParts (context);
+        context = generateTumblers (context);
         
         return context;
     }
@@ -458,27 +461,43 @@ public class MazeGenerator {
     private static LevelGenerationContext generateGatesBetweenSubparts (LevelGenerationContext context) {
         final var mask = context.getMask ();
         
+        final var part2subpart2gates = new HashMap <Integer, Map <Integer, List <LevelPassage>>> ();
+        
         for (int h = 0; h < mask.length; h++) {
             for (int w = 0; w < mask [h].length; w++) {
                 final var cell = mask [h][w];
                 
                 Optional.ofNullable (cell.getRightPass ()).ifPresent (passage -> {
-                    final var nei = passage.getAnother (cell);
-                    if (cell.getPart () == nei.getPart () && cell.getSubpart () != nei.getSubpart ()) {
-                        passage.setGateType (GateType.GATE);
-                    }
+                    setGateTypeToPassage (cell, passage, part2subpart2gates);
                 });
                 
                 Optional.ofNullable (cell.getBottomPass ()).ifPresent (passage -> {
-                    final var nei = passage.getAnother (cell);
-                    if (cell.getPart () == nei.getPart () && cell.getSubpart () != nei.getSubpart ()) {
-                        passage.setGateType (GateType.GATE);
-                    }
+                    setGateTypeToPassage (cell, passage, part2subpart2gates);
                 });
             }
         }
         
+        context.setPart2subpart2gates (part2subpart2gates);
         return context;
+    }
+    
+    private static void setGateTypeToPassage (
+        LevelCell cell, LevelPassage passage, Map <Integer, Map <Integer, List <LevelPassage>>> p2sp2gs
+    ) {
+        final var nei = passage.getAnother (cell);
+        final int cp = cell.getPart (), csp = cell.getSubpart (), nsp = nei.getSubpart ();
+        
+        if (cp == nei.getPart () && csp != nsp) {
+            p2sp2gs.putIfAbsent (cp, new HashMap <> ());
+            
+            p2sp2gs.get (cp).putIfAbsent (csp, new ArrayList <> ());
+            p2sp2gs.get (cp).putIfAbsent (nsp, new ArrayList <> ());
+            
+            p2sp2gs.get (cp).get (nsp).add (passage);
+            p2sp2gs.get (cp).get (nsp).add (passage);
+            
+            passage.setGateType (GateType.GATE);
+        }
     }
     
     private static LevelGenerationContext generateSlitsBetweenParts (LevelGenerationContext context) {
@@ -506,11 +525,9 @@ public class MazeGenerator {
             }
         }
         
-        System.out.println ("Fronts: " + fronts.size ()); // SYSOUT
         fronts.forEach ((__, cells) -> {
             Collections.shuffle (cells, r);
             var slits = 1 + r.nextInt (3);
-            System.out.println ("For front " + __ + ": " + slits); // SYSOUT
             for (int i = 0; i < slits; i++) {
                 final var cell = cells.get (i);
                 final var nei = List.of (cell.getRight (), cell.getLeft ()).stream ()
@@ -523,14 +540,48 @@ public class MazeGenerator {
                 if (cell.getRight () == nei) {
                     addPassage (cell, nei, LevelCell::setRightPass, LevelCell::setLeftPass, (a, b) -> true, null);
                     cell.getRightPass ().setGateType (GateType.SILT);
-                    System.out.println (cell.getPoint (0)); // SYSOUT
                 } else {
                     addPassage (cell, nei, LevelCell::setBottomPass, LevelCell::setTopPass, (a, b) -> true, null);
                     cell.getBottomPass ().setGateType (GateType.SILT);
-                    System.out.println (cell.getPoint (0)); // SYSOUT
                 }
             }
         });
+        
+        return context;
+    }
+    
+    private static LevelGenerationContext generateTumblers (LevelGenerationContext context) {
+        for (int p = 0; p < context.getSeeds ().size (); p++) {
+            final var seed = context.getSeeds ().get (p);
+            
+            final var subpar2cells = context.getPart2subpart2cells ().get (p);
+            for (int sp = 0; sp < subpar2cells.size (); sp++) {
+                final var cells = subpar2cells.get (sp);
+                Collections.shuffle (cells);
+                
+                if (cells.isEmpty ()) { continue; }
+                final var cell = cells.get (0);
+                
+                for (int i = 0; i < context.getSeeds ().size (); i++) {
+                    if (context.getSeeds ().get (i) == seed) { continue; }
+                    
+                    final var subpart2gates = context.getPart2subpart2gates ().getOrDefault (i, Map.of ());
+                    if (subpart2gates.isEmpty ()) { continue; }
+                    final var osp = r.nextInt (subpart2gates.size ());
+                    
+                    final var gates = subpart2gates.getOrDefault (osp, List.of ());
+                    if (gates.isEmpty ()) { i--; continue; }
+                    
+                    final var gate = gates.get (r.nextInt (gates.size ()));
+                    
+                    System.out.println (cell.getPoint (0) + " -> " + gate.getFrom ()); // SYSOUT
+                    final var tumbler = new LevelTumbler (cell, false);
+                    tumbler.getClose ().add (gate);
+                    tumbler.getOpen ().add (gate);
+                    cell.setTumbler (tumbler);
+                }
+            }
+        }
         
         return context;
     }

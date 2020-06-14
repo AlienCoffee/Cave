@@ -23,6 +23,8 @@ public class LevelCell implements Comparable <LevelCell> {
     
     private LevelPassage topPass, rightPass, bottomPass, leftPass;
     
+    private LevelTumbler tumbler;
+    
     private int part = 0, subpart = 0;
     
     public List <Pair <LevelCell, IPoint>> getMapNeighbours () {
