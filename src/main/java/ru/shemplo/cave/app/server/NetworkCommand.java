@@ -14,6 +14,8 @@ public enum NetworkCommand {
     
     GET_LOBBY_PLAYERS ("get lobby players"),
     LOBBY_PLAYERS ("lobby players"),
+    EXPEDITION_SIZE ("expedition size"),
+    EXPEDITION_TIME ("expedition time"),
     LEAVE_LOBBY ("leave lobby"),
     
     START_COUNTDOWN ("start countdown"),

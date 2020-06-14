@@ -53,6 +53,34 @@ public class ServerMessageHandler {
             pool.getContext ().applyAction (connection, parts [2]);
         } else if (PLAYER_MODE.getValue ().equals (parts [1])) {
             pool.getContext ().applyUserModeToggle (connection);
+        } else if (EXPEDITION_SIZE.getValue ().equals (parts [1])) {
+            try {
+                final var size = Integer.parseInt (parts [2]);
+                if (size >= 2) {
+                    pool.setExpeditionSize (size);
+                }
+            } catch (NumberFormatException nfe) {
+                // just ignore
+            }
+            
+            pool.getConnections ().forEach (c -> {
+                if (!c.isAlive ()) { return; }
+                c.sendMessage (EXPEDITION_SIZE.getValue (), String.valueOf (pool.getExpeditionSize ()));
+            });
+        }  else if (EXPEDITION_TIME.getValue ().equals (parts [1])) {
+            try {
+                final var time = Integer.parseInt (parts [2]);
+                if (time >= 1) {
+                    pool.setExpeditionTime (time);
+                }
+            } catch (NumberFormatException nfe) {
+                // just ignore
+            }
+            
+            pool.getConnections ().forEach (c -> {
+                if (!c.isAlive ()) { return; }
+                c.sendMessage (EXPEDITION_TIME.getValue (), String.valueOf (pool.getExpeditionTime ()));
+            });
         }
     }
     

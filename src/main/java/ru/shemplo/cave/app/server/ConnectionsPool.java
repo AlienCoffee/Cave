@@ -63,6 +63,12 @@ public class ConnectionsPool implements Closeable {
     private volatile int alive = 0, players = 0;
     @Getter private GameContext context;
     
+    @Setter @Getter
+    private int expeditionTime = 10;
+    
+    @Setter @Getter
+    private int expeditionSize = 2;
+    
     public void open () {
         listener = new Thread (() -> {
             while (!Thread.currentThread ().isInterrupted ()) {
@@ -95,7 +101,7 @@ public class ConnectionsPool implements Closeable {
                 if (state == ServerState.RECRUITING) {
                     newConnectionsAllowed = true;
                     
-                    if (countdown.get () >= 2) {
+                    if (countdown.get () >= expeditionSize) {
                         System.out.println ("Enough players recruited"); // SYSOUT
                         broadcastMessage (SERVER_STATE.getValue (), PRE_SATRT.name ());
                         broadcastMessage (START_COUNTDOWN.getValue ());
@@ -142,7 +148,7 @@ public class ConnectionsPool implements Closeable {
                         broadcastMessage (SERVER_STATE.getValue (), GAME.name ());
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         System.out.println ("All players are ready"); // SYSOUT
-                        countdown.set (100); // game time
+                        countdown.set (expeditionTime * 60); // game time
                         state = ServerState.GAME;
                     }
                     
