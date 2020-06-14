@@ -119,6 +119,7 @@ public class Level {
             list.add (cell);
         });
         
+        /*
         System.out.println ("Maze:"); // SYSOUT
         for (int i = 0; i < map.length; i++) {
             for (int j = 0; j < map [i].length; j++) {
@@ -136,6 +137,8 @@ public class Level {
         }
         
         System.out.println (list); // SYSOUT
+        */
+        
         return list;
     }
     
@@ -194,13 +197,16 @@ public class Level {
         Optional.ofNullable (map [y][x].getTumbler ()).ifPresent (tum -> {
             tum.setActive (!tum.isActive ());
             
-            tum.getOpen ().forEach (gate -> {
-                gate.setClosed (!tum.isActive ());
-            });
+            if (tum.isActive ()) {                
+                tum.getOpen ().forEach (gate -> {
+                    gate.setClosed (false);
+                });
+            } else {                
+                tum.getClose ().forEach (gate -> {
+                    gate.setClosed (true);
+                });
+            }
             
-            tum.getClose ().forEach (gate -> {
-                gate.setClosed (tum.isActive ());
-            });
         });
     }
     

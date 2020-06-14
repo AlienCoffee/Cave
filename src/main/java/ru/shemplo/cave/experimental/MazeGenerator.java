@@ -33,7 +33,7 @@ public class MazeGenerator {
     private static final Random r = new Random (1L);
     
     private static final int parts = 2;
-    private static final int size = parts * 20;
+    private static final int size = parts * 10;
     
     public static void main (String ... args) {
         final var context = generateMaze (size, size, parts);
@@ -64,7 +64,7 @@ public class MazeGenerator {
         System.out.println ("Maze:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 1 && maze [i][j].getSubpart () > 0) {                    
+                if (maze [i][j].getPart () == 1 && maze [i][j].getSubpart () == 1) {                    
                     System.out.print (maze [i][j].getSymbol ()); // SYSOUT
                 } else {
                     System.out.print (" "); // SYSOUT
@@ -493,7 +493,7 @@ public class MazeGenerator {
             p2sp2gs.get (cp).putIfAbsent (csp, new ArrayList <> ());
             p2sp2gs.get (cp).putIfAbsent (nsp, new ArrayList <> ());
             
-            p2sp2gs.get (cp).get (nsp).add (passage);
+            p2sp2gs.get (cp).get (csp).add (passage);
             p2sp2gs.get (cp).get (nsp).add (passage);
             
             passage.setGateType (GateType.GATE);
@@ -551,39 +551,50 @@ public class MazeGenerator {
     }
     
     private static LevelGenerationContext generateTumblers (LevelGenerationContext context) {
-        for (int p = 0; p < context.getSeeds ().size (); p++) {
-            final var seed = context.getSeeds ().get (p);
-            
-            final var subpar2cells = context.getPart2subpart2cells ().get (p);
-            for (int sp = 0; sp < subpar2cells.size (); sp++) {
-                final var cells = subpar2cells.get (sp);
-                Collections.shuffle (cells);
+        final var parts = context.getSeeds ().size ();
+        for (int p = 0; p < parts; p++) {
+            final var subpart2cells = context.getPart2subpart2cells ().get (p);
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                final var cells = subpart2cells.get (sp);
+                if (cells == null || cells.isEmpty ()) {
+                    throw new IllegalStateException ("No cells in part + " + p + ", subpart " + sp);
+                }
                 
-                if (cells.isEmpty ()) { continue; }
-                final var cell = cells.get (0);
-                
-                for (int i = 0; i < context.getSeeds ().size (); i++) {
-                    if (context.getSeeds ().get (i) == seed) { continue; }
+                int tumblersRest = 2 + r.nextInt (3);
+                while (tumblersRest-- > 0) {
+                    Collections.shuffle (cells, r);
+                    final var cell = cells.get (0);
                     
-                    final var subpart2gates = context.getPart2subpart2gates ().getOrDefault (i, Map.of ());
-                    if (subpart2gates.isEmpty ()) { continue; }
-                    final var osp = r.nextInt (subpart2gates.size ());
+                    if (cell.getTumbler () == null) {
+                        final var tumbler = new LevelTumbler (cell, false);
+                        cell.setTumbler (tumbler);
+                    }
                     
-                    final var gates = subpart2gates.getOrDefault (osp, List.of ());
-                    if (gates.isEmpty ()) { i--; continue; }
+                    final var tumbler = cell.getTumbler ();
+                    
+                    final var op = 1 + getRandomIntExcept (parts, p, r);
+                    final var ops2gates = context.getPart2subpart2gates ().get (op);
+                    final var gates = ops2gates.get (1 + r.nextInt (ops2gates.size ()));
                     
                     final var gate = gates.get (r.nextInt (gates.size ()));
-                    
-                    System.out.println (cell.getPoint (0) + " -> " + gate.getFrom ()); // SYSOUT
-                    final var tumbler = new LevelTumbler (cell, false);
                     tumbler.getClose ().add (gate);
                     tumbler.getOpen ().add (gate);
-                    cell.setTumbler (tumbler);
+                    
+                    System.out.println (cell.getPoint (0) + " -> " + gate.getFrom ().getPoint (0)); // SYSOUT
                 }
             }
         }
         
         return context;
+    }
+    
+    private static int getRandomIntExcept (int bound, int excpet, Random r) {
+        int value = r.nextInt (bound);
+        while (value == excpet) {
+            value = r.nextInt (bound);
+        }
+        
+        return value;
     }
     
 }

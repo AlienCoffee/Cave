@@ -92,7 +92,7 @@ public class LevelCell implements Comparable <LevelCell> {
     }
     
     public char getSymbol () {
-        boolean t = getTopPass () != null, r = getRightPass () != null,
+        boolean t = getTopPass () != null,    r = getRightPass () != null,
                 b = getBottomPass () != null, l = getLeftPass () != null;
         if (t && r && b && l) {
             return '┼';

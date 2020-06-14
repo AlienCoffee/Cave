@@ -71,7 +71,7 @@ public class ConnectionsPool implements Closeable {
                     return; // the work is over
                 }
                 
-                alive = 0;
+                int alive = 0;
                 synchronized (connections) {
                     for (final var connection : connections) {
                         if (connection.getNonTestedTime () > 500) {                            
@@ -83,6 +83,8 @@ public class ConnectionsPool implements Closeable {
                     
                     connections.removeIf (cc -> cc.canBeRemoved (this));
                 }
+                
+                this.alive = alive;
             }
         }, "Connections-Listener-Thread");
         listener.setDaemon (true);

@@ -77,7 +77,6 @@ public class ClientConnection implements Closeable {
             }
             
             System.out.println ("Reading thread of #" + id + " is interrupted"); // SYSOUT
-            Thread.currentThread ().interrupt ();
         });
         
         readThread.setDaemon (true);
@@ -108,11 +107,13 @@ public class ClientConnection implements Closeable {
     
     private void sendPackedMessage (String message) {
         try {
-            //System.out.println ("Out: " + message); // SYSOUT
-            w.write (message); w.write ('\n'); 
-            w.flush ();
-            
-            lastAliveTest = System.currentTimeMillis ();
+            synchronized (w) {                
+                //System.out.println ("Out: " + message); // SYSOUT
+                w.write (message); w.write ('\n'); 
+                w.flush ();
+                
+                lastAliveTest = System.currentTimeMillis ();
+            }
         } catch (Exception ioe) {
             System.out.println ("Connection #" + id + " is over"); // SYSOUT
             isAlive = false;
@@ -131,6 +132,7 @@ public class ClientConnection implements Closeable {
         if (isAlive ()) { return false; }
         
         if (!isClosed) {
+            System.out.println ("Killing #" + id + " before remove"); // SYSOUT
             pool.broadcastMessage (LEAVE_LOBBY.getValue (), getLogin ());
             
             try   { close (); }

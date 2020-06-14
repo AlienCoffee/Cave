@@ -24,6 +24,6 @@ public class LevelTumbler {
         open  = new ArrayList <> (), 
         close = new ArrayList <> ();
     
-    private boolean isActive;
+    private boolean isActive = false;
     
 }

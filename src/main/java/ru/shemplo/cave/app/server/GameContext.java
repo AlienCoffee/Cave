@@ -15,6 +15,7 @@ public class GameContext {
     
     private final Level level;
     
+    private final Map <Integer, Boolean> id2supermode = new HashMap <> ();
     private final Map <Integer, Integer> id2px = new HashMap <> ();
     private final Map <Integer, Integer> id2py = new HashMap <> ();
     
@@ -32,6 +33,7 @@ public class GameContext {
         int i = 0;
         for (final var connection : connections) {
             final var seed = levelContext.getSeeds ().get (i++);
+            id2supermode.put (connection.getId (), false);
             id2px.put (connection.getId (), seed.X);
             id2py.put (connection.getId (), seed.Y);
         }
@@ -48,7 +50,9 @@ public class GameContext {
         
         int px = id2px.getOrDefault (id, -1), py = id2py.getOrDefault (id, -1);
         if (dx != 0 || dy != 0) {
-            //if (!level.canStepOnFrom (dx, dy, px, py)) { return; }
+            if (!id2supermode.get (id) && !level.canStepOnFrom (dx, dy, px, py)) { 
+                return; // impossible to step on cell without super mode
+            }
             
             px = id2px.compute (id, (__, v) -> v + dx);
             py = id2py.compute (id, (__, v) -> v + dy);
@@ -97,12 +101,17 @@ public class GameContext {
                       pry = id2py.getOrDefault (p.getId (), -100000) - y;
             
             for (final var cell : visibleCells) {
-                if (cell.getX () == prx && cell.getY () == pry) {
+                if (cell.getX () - x == prx && cell.getY () - y == pry) {
                     playersJoiner.add (String.join (",", String.valueOf (prx), String.valueOf (pry)));
-                    if (!internal) { applyMove (p, 0, 0, true); }
                     break;
                 }
             }
+        }
+        
+        if (!internal) {            
+            pool.getConnections ().forEach (c -> {            
+                applyMove (c, 0, 0, true);
+            });
         }
         
         final String sx = String.valueOf (x), sy = String.valueOf (y); 
@@ -122,6 +131,10 @@ public class GameContext {
         pool.getConnections ().forEach (c -> {            
             applyMove (c, 0, 0, true);
         });
+    }
+    
+    public void applyUserModeToggle (ClientConnection connection) {
+        id2supermode.compute (connection.getId (), (__, v) -> !v);
     }
     
 }

@@ -25,6 +25,7 @@ public enum NetworkCommand {
     
     PLAYER_MOVE ("player move"),
     PLAYER_ACTION ("player action"),
+    PLAYER_MODE ("player mode"),
     PLAYER_LOCATION ("player location"),
     PLAYERS_LOCATION ("players location")
     

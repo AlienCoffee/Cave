@@ -58,6 +58,7 @@ public class GameScene extends AbstractScene {
         } else if (COUNTDOWN.getValue ().equals (parts [1])) {
             countdown = Integer.parseInt (parts [2]);
         } else if (SERVER_STATE.getValue ().equals (parts [1])) {
+            System.out.println ("Server state: " + parts [2]); // SYSOUT
             serverState = ServerState.valueOf (parts [2]);
             
             if (serverState == ServerState.RECRUITING) {
@@ -188,6 +189,9 @@ public class GameScene extends AbstractScene {
                 case ENTER: {
                     connection.sendMessage (PLAYER_ACTION.getValue (), "tumbler");
                 } break;
+                case M: {
+                    connection.sendMessage (PLAYER_MODE.getValue ());
+                } break;
                 
                 default: break;
             }
@@ -213,6 +217,7 @@ public class GameScene extends AbstractScene {
         player = new WritableImage (playerSet.getPixelReader (), 316, 44, 132, 326);
     }
     
+    @SuppressWarnings ("unused")
     private List <Color> subpartColors = List.of (
         Color.RED, Color.BLUE, Color.GREEN, Color.BLUEVIOLET, Color.YELLOW, Color.CYAN,
         Color.BROWN, Color.LIME, Color.BLACK, Color.TOMATO, Color.CADETBLUE
@@ -225,8 +230,6 @@ public class GameScene extends AbstractScene {
     private int mx = -1, my = -1;
     
     private void render () {
-        //final var size = level.getSize ();
-        
         final double cw = canvasC.getWidth (), ch =  canvasC.getHeight ();
         final double cx = cw / 2, cy =  ch / 2;
         
@@ -240,8 +243,8 @@ public class GameScene extends AbstractScene {
             visibleCells.forEach (cell -> {
                 ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
                 
-                ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
-                ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 10, 10);
+                //ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
+                //ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 5, 5);
             });
             
             visibleGates.forEach (gate -> {
@@ -257,9 +260,14 @@ public class GameScene extends AbstractScene {
             });
             
             visibleTumblers.forEach (tumbler -> {
+                final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
                 ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
                 
-                ctx.fillRect (cx + (tumbler.getX () - 0.5) * ts + 25, cy + (tumbler.getY () - 0.5) * ts + 25, 15, 15);
+                final var fx = cx + (tumbler.getX () - 0.5) * ts + 35;
+                final var fy = cy + (tumbler.getY () - 0.5) * ts + 15;
+                
+                ctx.fillRect (fx + 1, fy + 1, 13, 13);
+                ctx.drawImage (tumblerSkin, fx, fy, 15, 15);
             });
             
             visiblePlayers.forEach (player -> {

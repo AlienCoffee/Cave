@@ -51,6 +51,8 @@ public class ServerMessageHandler {
             pool.getContext ().applyMove (connection, dx, dy);
         } else if (PLAYER_ACTION.getValue ().equals (parts [1])) {
             pool.getContext ().applyAction (connection, parts [2]);
+        } else if (PLAYER_MODE.getValue ().equals (parts [1])) {
+            pool.getContext ().applyUserModeToggle (connection);
         }
     }
     

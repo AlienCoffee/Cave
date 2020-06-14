@@ -28,6 +28,9 @@ public class LevelTextures {
     private static final Image tunnelRB   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-rb.png"));
     private static final Image tunnel0    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-0.png"));
     
+    public static final Image tumblerOn  = new Image (Level.class.getResourceAsStream ("/gfx/tumbler-on.png"));
+    public static final Image tumblerOff = new Image (Level.class.getResourceAsStream ("/gfx/tumbler-off.png"));
+    
     public static final Map <Character, Image> symbol2texture = new HashMap <> ();
     
     static {
