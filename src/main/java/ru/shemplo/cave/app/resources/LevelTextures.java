@@ -4,6 +4,7 @@ import java.util.HashMap;
 import java.util.Map;
 
 import javafx.scene.image.Image;
+import javafx.scene.image.WritableImage;
 import ru.shemplo.cave.app.entity.level.Level;
 
 public class LevelTextures {
@@ -53,6 +54,15 @@ public class LevelTextures {
         symbol2texture.put ('╢', tunnelL);
         
         symbol2texture.put (' ', tunnel0);
+    }
+    
+    // 132 x 326
+    
+    private static final Image playerSet = new Image (Level.class.getResourceAsStream ("/gfx/player.png"));
+    public static final Image player;
+    
+    static {
+        player = new WritableImage (playerSet.getPixelReader (), 316, 44, 132, 326);
     }
     
 }

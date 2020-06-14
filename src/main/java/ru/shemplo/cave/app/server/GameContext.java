@@ -49,8 +49,10 @@ public class GameContext {
         if (Math.abs (dx) > 1 || Math.abs (dy) > 1) { return; }
         
         int px = id2px.getOrDefault (id, -1), py = id2py.getOrDefault (id, -1);
+        final var supermode = id2supermode.get (id);
+        
         if (dx != 0 || dy != 0) {
-            if (!id2supermode.get (id) && !level.canStepOnFrom (dx, dy, px, py)) { 
+            if (!supermode && !level.canStepOnFrom (dx, dy, px, py)) { 
                 return; // impossible to step on cell without super mode
             }
             
@@ -117,7 +119,9 @@ public class GameContext {
         final String sx = String.valueOf (x), sy = String.valueOf (y); 
         connection.sendMessage (PLAYER_LOCATION.getValue (), sx, sy, cellsJoiner.toString (), 
                 gatesJoiner.toString (), tumblersJoiner.toString ());
-        connection.sendMessage (PLAYERS_LOCATION.getValue (), sx, sy, playersJoiner.toString ());
+        
+        connection.sendMessage (PLAYERS_LOCATION.getValue (), sx, sy, playersJoiner.toString (), 
+                String.valueOf (supermode));
     }
     
     public void applyAction (ClientConnection connection, String action) {
@@ -135,6 +139,7 @@ public class GameContext {
     
     public void applyUserModeToggle (ClientConnection connection) {
         id2supermode.compute (connection.getId (), (__, v) -> !v);
+        applyMove (connection, 0, 0, true);
     }
     
 }

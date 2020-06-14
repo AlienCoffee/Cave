@@ -66,7 +66,7 @@ public class ConnectionsPool implements Closeable {
     public void open () {
         listener = new Thread (() -> {
             while (!Thread.currentThread ().isInterrupted ()) {
-                try { Thread.sleep (500); } catch (InterruptedException ie) {
+                try { Thread.sleep (250); } catch (InterruptedException ie) {
                     Thread.currentThread ().interrupt ();
                     return; // the work is over
                 }
@@ -74,7 +74,7 @@ public class ConnectionsPool implements Closeable {
                 int alive = 0;
                 synchronized (connections) {
                     for (final var connection : connections) {
-                        if (connection.getNonTestedTime () > 500) {                            
+                        if (connection.getNonTestedTime () > 250) {                            
                             connection.sendMessage (PING.getValue ());
                         }
                         
@@ -127,9 +127,9 @@ public class ConnectionsPool implements Closeable {
                     }
                     
                     if (alive < players) {
-                        broadcastMessage (SERVER_STATE.getValue (), RECRUITING.name ());
-                        state = RECRUITING;
-                        countdown.set (0);
+                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
+                        countdown.set (5);
+                        state = FINISH;
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -142,14 +142,14 @@ public class ConnectionsPool implements Closeable {
                         broadcastMessage (SERVER_STATE.getValue (), GAME.name ());
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         System.out.println ("All players are ready"); // SYSOUT
-                        countdown.set (1000); // game time
+                        countdown.set (100); // game time
                         state = ServerState.GAME;
                     }
                     
                     if (alive < players) {
-                        broadcastMessage (SERVER_STATE.getValue (), RECRUITING.name ());
-                        state = RECRUITING;
-                        countdown.set (0);
+                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
+                        countdown.set (5);
+                        state = FINISH;
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -159,7 +159,7 @@ public class ConnectionsPool implements Closeable {
                 } else if (state == ServerState.GAME) {
                     broadcastMessage (COUNTDOWN.getValue (), String.valueOf (countdown.get ()));
                     if (countdown.decrementAndGet () <= 0) {
-                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name ());
+                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "Expedition time is over");
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         System.out.println ("Game time is over"); // SYSOUT
                         state = ServerState.FINISH;
@@ -167,9 +167,9 @@ public class ConnectionsPool implements Closeable {
                     }
                     
                     if (alive < players) {
-                        broadcastMessage (SERVER_STATE.getValue (), RECRUITING.name ());
-                        state = RECRUITING;
-                        countdown.set (0);
+                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
+                        countdown.set (5);
+                        state = FINISH;
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -179,6 +179,12 @@ public class ConnectionsPool implements Closeable {
                 } else if (state == ServerState.FINISH) {
                     broadcastMessage (COUNTDOWN.getValue (), String.valueOf (countdown.get ()));
                     if (countdown.decrementAndGet () <= 0) {
+                        synchronized (connections) {
+                            for (final var connection : connections) {
+                                connection.setAlive (false);
+                            }
+                        }
+                        
                         broadcastMessage (SERVER_STATE.getValue (), RECRUITING.name ());
                         System.out.println ("Server is waiting for players"); // SYSOUT
                         state = ServerState.RECRUITING;

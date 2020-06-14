@@ -197,16 +197,12 @@ public class Level {
         Optional.ofNullable (map [y][x].getTumbler ()).ifPresent (tum -> {
             tum.setActive (!tum.isActive ());
             
-            if (tum.isActive ()) {                
-                tum.getOpen ().forEach (gate -> {
-                    gate.setClosed (false);
-                });
-            } else {                
-                tum.getClose ().forEach (gate -> {
-                    gate.setClosed (true);
-                });
-            }
-            
+            tum.getOpen ().forEach (gate -> {
+                gate.setClosed (!tum.isActive ());
+            });
+            tum.getClose ().forEach (gate -> {
+                gate.setClosed (tum.isActive ());
+            });
         });
     }
     

@@ -560,7 +560,7 @@ public class MazeGenerator {
                     throw new IllegalStateException ("No cells in part + " + p + ", subpart " + sp);
                 }
                 
-                int tumblersRest = 2 + r.nextInt (3);
+                int tumblersRest = 3 + cells.size () / 5 + r.nextInt (3);
                 while (tumblersRest-- > 0) {
                     Collections.shuffle (cells, r);
                     final var cell = cells.get (0);
@@ -577,10 +577,17 @@ public class MazeGenerator {
                     final var gates = ops2gates.get (1 + r.nextInt (ops2gates.size ()));
                     
                     final var gate = gates.get (r.nextInt (gates.size ()));
-                    tumbler.getClose ().add (gate);
-                    tumbler.getOpen ().add (gate);
+                    if (tumbler.getOpen ().contains (gate) || tumbler.getClose ().contains (gate)) {
+                        continue; // this gate is already controlled by this tumbler
+                    }
                     
-                    System.out.println (cell.getPoint (0) + " -> " + gate.getFrom ().getPoint (0)); // SYSOUT
+                    if (r.nextBoolean ()) {
+                        tumbler.getClose ().add (gate);
+                    } else {
+                        tumbler.getOpen ().add (gate);
+                    }
+                    
+                    //System.out.println (cell.getPoint (0) + " -> " + gate.getFrom ().getPoint (0)); // SYSOUT
                 }
             }
         }

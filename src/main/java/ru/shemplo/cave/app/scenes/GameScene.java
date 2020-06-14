@@ -13,8 +13,6 @@ import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
-import javafx.scene.image.Image;
-import javafx.scene.image.WritableImage;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.HBox;
@@ -24,7 +22,6 @@ import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import ru.shemplo.cave.app.CaveApplication;
 import ru.shemplo.cave.app.entity.level.GateType;
-import ru.shemplo.cave.app.entity.level.Level;
 import ru.shemplo.cave.app.entity.level.RenderCell;
 import ru.shemplo.cave.app.entity.level.RenderGate;
 import ru.shemplo.cave.app.entity.level.RenderTumbler;
@@ -50,20 +47,21 @@ public class GameScene extends AbstractScene {
     }
     
     private ServerState serverState = ServerState.WAITIN_FOR_PLAYERS;
+    private boolean supermode = false;
+    private String finishReason = "";
     private int countdown = -1;
     
     private void handleMessage (String [] parts, ClientConnection connection) {
-        if (START_COUNTDOWN.getValue ().equals (parts [1])) {
-            Platform.runLater (() -> { backB.setDisable (true); });
-        } else if (COUNTDOWN.getValue ().equals (parts [1])) {
+        if (COUNTDOWN.getValue ().equals (parts [1])) {
             countdown = Integer.parseInt (parts [2]);
         } else if (SERVER_STATE.getValue ().equals (parts [1])) {
             System.out.println ("Server state: " + parts [2]); // SYSOUT
             serverState = ServerState.valueOf (parts [2]);
             
-            if (serverState == ServerState.RECRUITING) {
+            if (serverState == ServerState.FINISH) {
                 app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
-                ApplicationScene.MAIN_MENU.show (app);
+                Platform.runLater (() -> { backB.setDisable (false); });
+                finishReason = parts [3];
             } else if (serverState == ServerState.GAME) {
                 startGame ();
             }
@@ -105,22 +103,19 @@ public class GameScene extends AbstractScene {
                     return RenderTumbler.builder ().x (dx).y (dy).active (isActive).build ();
                 }).collect (Collectors.toList ());
             
-            synchronized (visibleCells) {
+            synchronized (lock) {
                 visibleCells.clear ();
                 visibleCells.addAll (cells);
-            }
-            
-            synchronized (visibleGates) {
+                
                 visibleGates.clear ();
                 visibleGates.addAll (gates);
-            }
-            
-            synchronized (visibleTumblers) {
+                
                 visibleTumblers.clear ();
                 visibleTumblers.addAll (tumblers);
             }
         } else if (PLAYERS_LOCATION.getValue ().equals (parts [1])) {
             mx = Integer.parseInt (parts [2]); my = Integer.parseInt (parts [3]);
+            supermode = Boolean.parseBoolean (parts [5]);
             
             final var players = Arrays.stream (parts [4].split ("@"))
                 . filter (str -> !str.isEmpty ())
@@ -131,7 +126,7 @@ public class GameScene extends AbstractScene {
                     return IPoint.of (dx, dy);
                 }).collect (Collectors.toList ());
             
-            synchronized (visiblePlayers) {
+            synchronized (lock) {
                 visiblePlayers.clear ();
                 visiblePlayers.addAll (players);
             }
@@ -144,9 +139,9 @@ public class GameScene extends AbstractScene {
         
         menuBox.getChildren ().add (backB);
         backB.setOnAction (ae -> {
-            app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
             ApplicationScene.MAIN_MENU.show (app);
         });
+        backB.setDisable (true);
         
         final var canvasBox = new VBox ();
         canvasBox.setFillWidth (true);
@@ -208,15 +203,6 @@ public class GameScene extends AbstractScene {
     
     private final double ts = 32 * 6; // tile size 
     
-    // 132 x 326
-    
-    private static final Image playerSet = new Image (Level.class.getResourceAsStream ("/gfx/player.png"));
-    private static final Image player;
-    
-    static {
-        player = new WritableImage (playerSet.getPixelReader (), 316, 44, 132, 326);
-    }
-    
     @SuppressWarnings ("unused")
     private List <Color> subpartColors = List.of (
         Color.RED, Color.BLUE, Color.GREEN, Color.BLUEVIOLET, Color.YELLOW, Color.CYAN,
@@ -227,6 +213,7 @@ public class GameScene extends AbstractScene {
     private List <RenderCell> visibleCells = new ArrayList <> ();
     private List <RenderGate> visibleGates = new ArrayList <> ();
     private List <IPoint> visiblePlayers = new ArrayList <> ();
+    private final Object lock = new Object ();
     private int mx = -1, my = -1;
     
     private void render () {
@@ -240,48 +227,54 @@ public class GameScene extends AbstractScene {
             ctx.setFill (Color.YELLOW);
             ctx.fillText ("Waiting for players", 20, 40);
         } else if (serverState == ServerState.GAME) {
-            visibleCells.forEach (cell -> {
-                ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
+            synchronized (lock) {                
+                visibleCells.forEach (cell -> {
+                    ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
+                    
+                    //ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
+                    //ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 5, 5);
+                });
                 
-                //ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
-                //ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 5, 5);
-            });
-            
-            visibleGates.forEach (gate -> {
-                ctx.setFill (gate.getType () == GateType.GATE 
-                        ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
-                                : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
-                        );
-                if (gate.isVertical ()) {                
-                    ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
-                } else {                
-                    ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
-                }
-            });
-            
-            visibleTumblers.forEach (tumbler -> {
-                final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
-                ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
+                visibleGates.forEach (gate -> {
+                    ctx.setFill (gate.getType () == GateType.GATE 
+                            ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
+                                    : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
+                            );
+                    if (gate.isVertical ()) {                
+                        ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
+                    } else {                
+                        ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
+                    }
+                });
                 
-                final var fx = cx + (tumbler.getX () - 0.5) * ts + 35;
-                final var fy = cy + (tumbler.getY () - 0.5) * ts + 15;
+                visibleTumblers.forEach (tumbler -> {
+                    final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
+                    ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
+                    
+                    final var fx = cx + (tumbler.getX () - 0.5) * ts + 35;
+                    final var fy = cy + (tumbler.getY () - 0.5) * ts + 15;
+                    
+                    ctx.fillRect (fx + 1, fy + 1, 13, 13);
+                    ctx.drawImage (tumblerSkin, fx, fy, 15, 15);
+                });
                 
-                ctx.fillRect (fx + 1, fy + 1, 13, 13);
-                ctx.drawImage (tumblerSkin, fx, fy, 15, 15);
-            });
-            
-            visiblePlayers.forEach (player -> {
-                ctx.drawImage (GameScene.player, cx + player.X * ts - 10, cy + player.Y * ts - 20, 20, 40);
-            });
-            
-            ctx.drawImage (player, cx - 10, cy - 20, 20, 40);
+                final var playerSkin = LevelTextures.player;
+                visiblePlayers.forEach (player -> {
+                    ctx.drawImage (playerSkin, cx + player.X * ts - 10, cy + player.Y * ts - 20, 20, 40);
+                });
+                
+                ctx.drawImage (playerSkin, cx - 10, cy - 20, 20, 40);
+            }
             
             ctx.setFill (Color.YELLOW);
             ctx.fillText ("X: " + mx, 20, 40);
             ctx.fillText ("Y: " + my, 20, 55);
-            ctx.fillText ("Rest time: " + countdown, 20, 70);
+            ctx.fillText (String.format ("Rest time: %02d:%02d", countdown / 60, countdown % 60), 20, 70);
+            ctx.fillText ("Supermode: " + supermode, 20, 85);
+        } else if (serverState == ServerState.FINISH) {
+            ctx.setFill (Color.YELLOW);
+            ctx.fillText (finishReason, 20, 40);
         }
-        
     }
     
 }
