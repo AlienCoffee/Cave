@@ -4,12 +4,14 @@ import java.util.Comparator;
 
 import lombok.AccessLevel;
 import lombok.AllArgsConstructor;
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import lombok.ToString;
 
 @ToString
 @Getter @Setter
+@EqualsAndHashCode
 @AllArgsConstructor (access = AccessLevel.PRIVATE)
 public class LevelPassage {
     
@@ -17,6 +19,9 @@ public class LevelPassage {
     
     private GateType gateType;
     private boolean closed;
+    
+    // For maze generator purposes only
+    private LevelPassage prototype;
     
     public LevelCell getAnother (LevelCell cell) {
         if (from == cell) { return to; }
@@ -31,9 +36,9 @@ public class LevelPassage {
     public static LevelPassage of (LevelCell cellA, LevelCell cellB, GateType gateType) {
         final var order = cellsOrderer.compare (cellA, cellB);
         if (order > 0) {            
-            return new LevelPassage (cellB, cellA, gateType, true);
+            return new LevelPassage (cellB, cellA, gateType, true, null);
         } else if (order < 0) {
-            return new LevelPassage (cellA, cellB, gateType, true);
+            return new LevelPassage (cellA, cellB, gateType, true, null);
         }
         
         throw new IllegalArgumentException ();

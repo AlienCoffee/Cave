@@ -76,8 +76,10 @@ public class GameScene extends AbstractScene {
                     
                     final var cs = cd [2].charAt (0);
                     final var image = LevelTextures.symbol2texture.get (cs);
+                    final var isExit = Boolean.parseBoolean (cd [3]);
                     
-                    return RenderCell.builder ().x (dx).y (dy).image (image).build ();
+                    return RenderCell.builder ().x (dx).y (dy).image (image)
+                         . exit (isExit).build ();
                 }).collect (Collectors.toList ());
             
             final var gates = Arrays.stream (parts [5].split ("@"))
@@ -232,6 +234,11 @@ public class GameScene extends AbstractScene {
                     ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
                     //ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
                     //ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 5, 5);
+                    
+                    if (cell.isExit ()) {
+                        ctx.setFill (Color.WHITESMOKE);
+                        ctx.fillRect (cx + cell.getX () * ts - 20, cy + cell.getY () * ts - 20, 40, 40);
+                    }
                 });
                 
                 visibleGates.forEach (gate -> {

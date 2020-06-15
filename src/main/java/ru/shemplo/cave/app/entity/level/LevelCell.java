@@ -1,5 +1,6 @@
 package ru.shemplo.cave.app.entity.level;
 
+import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
@@ -14,18 +15,23 @@ import ru.shemplo.snowball.stuctures.Pair;
 @Getter @Setter
 @AllArgsConstructor
 @RequiredArgsConstructor
-@ToString (of = {"x", "y", "part"})
+@ToString (of = {"x", "y", "part", "subpart", "isExit"})
 public class LevelCell implements Comparable <LevelCell> {
     
     private final int x, y;
     
     private LevelCell top, right, bottom, left;
     
+    // For maze generator purposes only
+    private final List <LevelPassage> neighbours = new ArrayList <> ();
+    
     private LevelPassage topPass, rightPass, bottomPass, leftPass;
     
     private LevelTumbler tumbler;
     
     private int part = 0, subpart = 0;
+    
+    private boolean isExit;
     
     public List <Pair <LevelCell, IPoint>> getMapNeighbours () {
         return Arrays.asList  (
@@ -61,6 +67,10 @@ public class LevelCell implements Comparable <LevelCell> {
     
     public IPoint getPoint (double distance) {
         return IPoint.of (x, y, distance);
+    }
+    
+    public IPoint getPartPoint () {
+        return IPoint.of (part, subpart);
     }
     
     public void setRelative (IPoint relation, boolean inversed, LevelCell relative) {

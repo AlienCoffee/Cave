@@ -33,13 +33,14 @@ public class MazeGenerator {
     private static final Random r = new Random (1L);
     
     private static final int parts = 2;
-    private static final int size = parts * 10;
+    private static final int size = parts * 20;
     
     public static void main (String ... args) {
         final var context = generateMaze (size, size, parts);
         final var maze = context.getMask ();
         
         System.out.println ("Seed points: " + context.getSeeds ()); // SYSOUT
+        System.out.println ("Exit: " + context.getExit ()); // SYSOUT
         
         System.out.println ("Maze mask:"); // SYSOUT
         for (int i = 0; i < size; i++) {
@@ -98,16 +99,42 @@ public class MazeGenerator {
             }
             System.out.println (); // SYSOUT
         }
+        for (int i = 0; i < size; i++) {
+            for (int j = 0; j < size; j++) {
+                if (maze [i][j].getPart () == 2) {
+                    if (maze [i][j].getSubpart () == 10) {
+                        System.out.print ("█"); // SYSOUT
+                    } else if (maze [i][j].getSubpart () == 11) {
+                        System.out.print ("▒"); // SYSOUT
+                    } else if (maze [i][j].getSubpart () == 12) {
+                        System.out.print ("▓"); // SYSOUT
+                    } else if (maze [i][j].getSubpart () == 13) {
+                        System.out.print ("░"); // SYSOUT
+                    } else if (maze [i][j].getSubpart () == 14) {
+                        System.out.print ("|"); // SYSOUT
+                    } else if (maze [i][j].getSubpart () > 14) {
+                        System.out.print ("*"); // SYSOUT                        
+                    } else {
+                        System.out.print (maze [i][j].getSubpart ()); // SYSOUT
+                    }
+                } else {
+                    System.out.print (" "); // SYSOUT
+                }
+            }
+            System.out.println (); // SYSOUT
+        }
     }
     
     public static LevelGenerationContext generateMaze (int width, int height, int parts) {
         var context = generateMask (width, height, parts);
         context = generatePassagesTree (context);
-        context = generateSubparts (context, 15);
+        context = generateSubparts (context, 10);
         
         context = generateCyclesWithinSubparts (context, 23);
         context = generateGatesBetweenSubparts (context);
         context = generateSlitsBetweenParts (context);
+        context = generateExit (context);
+        
         context = generateTumblers (context);
         
         return context;
@@ -550,51 +577,199 @@ public class MazeGenerator {
         return context;
     }
     
+    private static LevelGenerationContext generateExit (LevelGenerationContext context) {
+        final var part = r.nextInt (context.getSeeds ().size ());
+        final var subpart2cells = context.getPart2subpart2cells ().get (part);
+        
+        final var exit = subpart2cells.stream ().sorted (Comparator.comparing (List::size))
+            . findFirst ().map (cells -> cells.get (0)).orElse (null);
+        context.setExit (exit);
+        exit.setExit (true);
+        
+        return context;
+    }
+    
     private static LevelGenerationContext generateTumblers (LevelGenerationContext context) {
-        final var parts = context.getSeeds ().size ();
-        for (int p = 0; p < parts; p++) {
-            final var subpart2cells = context.getPart2subpart2cells ().get (p);
-            for (int sp = 0; sp < subpart2cells.size (); sp++) {
-                final var cells = subpart2cells.get (sp);
-                if (cells == null || cells.isEmpty ()) {
-                    throw new IllegalStateException ("No cells in part + " + p + ", subpart " + sp);
-                }
+        final var mask = context.getMask ();
+        
+        final var graph = buildMazeGraph (context);
+        graph.runFloydWarshall ();
+        context.setGraph (graph);
+        
+        /*
+        for (int i = 0; i < graph.getNodes ().size (); i++) {
+            System.out.println (Arrays.toString (graph.getDistances () [i])); // SYSOUT
+        }
+        */
+        
+        final var destination = graph.getPart2node ().get (context.getExit ().getPartPoint ());
+        System.out.println (destination); // SYSOUT
+        int primaryWalksSize = 0;
+        
+        final var part2walks = new HashMap <Integer, List <LevelPassage>> ();
+        
+        for (final var seed : context.getSeeds ()) {
+            System.out.println ("Seed: " + seed); // SYSOUT
+            final var node = graph.getPart2node ().get (mask [seed.Y][seed.X].getPartPoint ());
+            final var walksNisPrimary = generateRandomWalks (graph, node, destination, 11);
+            if (walksNisPrimary.S) {
+                // All other walks will be cut off after this number of steps
+                primaryWalksSize = walksNisPrimary.F.size ();
+            }
+            
+            part2walks.put (node.getPart (), walksNisPrimary.F);
+        }
+        
+        final var order = IntStream.range (1, context.getSeeds ().size () + 1)
+            . filter (i -> i != destination.getPart ()).mapToObj (i -> i)
+            . collect (Collectors.toList ());
+        Collections.shuffle (order, r);
+        // Door to exit will be opened the last
+        order.add (destination.getPart ());
+        
+        final var inSeed = context.getSeeds ().get (destination.getPart () - 1);
+        var inPart = mask [inSeed.Y][inSeed.X].getPartPoint ();
+        
+        final LevelCell [] locations = new LevelCell [order.size ()];
+        for (int i = 0; i < order.size (); i++) {
+            final var seed = context.getSeeds ().get (i);
+            locations [i] = graph.getPart2node ().get (mask [seed.Y][seed.X].getPartPoint ());
+        }
+        
+        for (int round = 0; round < primaryWalksSize; round++) {
+            for (int currentPart : order) {
+                final var walk = part2walks.get (currentPart).get (round);
+                final var walkTo = walk.getAnother (locations [currentPart - 1]);
                 
-                int tumblersRest = 3 + cells.size () / 5 + r.nextInt (3);
-                while (tumblersRest-- > 0) {
-                    Collections.shuffle (cells, r);
-                    final var cell = cells.get (0);
-                    
+                final var possibleGates = locations [currentPart - 1].getNeighbours ().stream ().filter (passage -> {
+                    final var nei = passage.getAnother (locations [currentPart - 1]);
+                    return nei.getPart () == walkTo.getPart () && nei.getSubpart () == walkTo.getSubpart ();
+                }).collect (Collectors.toList ());
+                //System.out.println ("Possible gates: " + possibleGates.size ()); // SYSOUT
+                Collections.shuffle (possibleGates, r);
+                
+                locations [currentPart - 1] = possibleGates.get (0).getAnother (locations [currentPart - 1]);
+                inPart = locations [currentPart - 1].getPartPoint ();
+                
+                final var close = possibleGates.subList (1, possibleGates.size ()).stream ()
+                    . map (LevelPassage::getPrototype).collect (Collectors.toList ());
+                final var open = possibleGates.get (0).getPrototype ();
+                
+                final var cells = context.getPart2subpart2cells ().get (inPart.F - 1).get (inPart.S - 1);
+                //System.out.println ("Possible cells: " + cells.size ()); // SYSOUT
+                int attempts = 0;
+                do {
+                    final var cell = cells.get (r.nextInt (cells.size ()));
                     if (cell.getTumbler () == null) {
+                        System.out.println (cell.getPoint (0) + " will open " + open.getFrom ().getPoint (0)); // SYSOUT
                         final var tumbler = new LevelTumbler (cell, false);
+                        tumbler.getClose ().addAll (close);
+                        tumbler.getOpen ().add (open);
                         cell.setTumbler (tumbler);
+                        
+                        break;
                     }
-                    
-                    final var tumbler = cell.getTumbler ();
-                    
-                    final var op = 1 + getRandomIntExcept (parts, p, r);
-                    final var ops2gates = context.getPart2subpart2gates ().get (op);
-                    final var gates = ops2gates.get (1 + r.nextInt (ops2gates.size ()));
-                    
-                    final var gate = gates.get (r.nextInt (gates.size ()));
-                    if (tumbler.getOpen ().contains (gate) || tumbler.getClose ().contains (gate)) {
-                        continue; // this gate is already controlled by this tumbler
-                    }
-                    
-                    if (r.nextBoolean ()) {
-                        tumbler.getClose ().add (gate);
-                    } else {
-                        tumbler.getOpen ().add (gate);
-                    }
-                    
-                    //System.out.println (cell.getPoint (0) + " -> " + gate.getFrom ().getPoint (0)); // SYSOUT
-                }
+                } while (attempts++ < 1000);
             }
         }
         
         return context;
     }
     
+    private static Pair <List <LevelPassage>, Boolean> generateRandomWalks (
+        LevelGenerationGraph graph, LevelCell node, 
+        LevelCell destination, int stepsLimit
+    ) {
+        final var startDistance = graph.getDistances () [node.getY ()][destination.getY ()];
+        final boolean canReach = startDistance <= stepsLimit;
+        final var walks = new ArrayList <LevelPassage> ();
+        final var dists = graph.getDistances ();
+        
+        var currentNode = node;
+        while (stepsLimit-- > 0) {
+            //System.out.println ("Steps: " + steps); // SYSOUT
+            final var neis = currentNode.getNeighbours ();
+            Collections.shuffle (neis, r);
+            
+            for (final var passage : neis) {   
+                final var nei = passage.getAnother (currentNode);
+                //System.out.println (nei.getY () + " | " + dists [nei.getY ()][destination.getY ()]); // SYSOUT
+                if ((canReach && stepsLimit >= dists [nei.getY ()][destination.getY ()]) || !canReach) {
+                    //System.out.println (currentNode.getPartPoint () + " -> " + nei.getPartPoint ()); // SYSOUT
+                    walks.add (passage);
+                    currentNode = nei;
+                    break;
+                }
+            }            
+        }
+        
+        return Pair.mp (walks, canReach);
+    }
+    
+    private static LevelGenerationGraph buildMazeGraph (LevelGenerationContext context) {
+        final var graph = new LevelGenerationGraph (context);
+        
+        final var counter = new AtomicInteger ();
+        for (final var seed : context.getSeeds ()) {            
+            final var passages = new HashSet <LevelPassage> ();
+            final var queue = new LinkedList <IPoint> ();
+            final var visited = new HashSet <IPoint> ();
+            
+            final var startPoint = context.getMask () [seed.Y][seed.X].getPartPoint ();
+            queue.add (startPoint); visited.add (startPoint);
+            
+            while (!queue.isEmpty ()) {
+                final var point = queue.poll ();
+                final var cnode = graph.getPart2node ().computeIfAbsent (point, k -> {
+                    final var nd = new LevelCell (0, counter.getAndIncrement ());
+                    graph.getNodes ().add (nd);
+                    nd.setSubpart (k.S);
+                    nd.setPart (k.F);
+                    
+                    return nd;
+                });
+                
+                final var gates = context.getPart2subpart2gates ().getOrDefault (point.F, Map.of ())
+                        . getOrDefault (point.S, List.of ());
+                for (final var gate : gates) {
+                    final IPoint ap = gate.getFrom ().getPartPoint (), 
+                            bp = gate.getTo ().getPartPoint ();
+                    final var next = ap.X == point.X && ap.Y == point.Y ? bp 
+                            : (bp.X == point.X && bp.Y == point.Y ? ap : null);
+                    if (next == null) { continue; }
+                    
+                    final var node = graph.getPart2node ().computeIfAbsent (next, k -> {
+                        final var nd = new LevelCell (0, counter.getAndIncrement ());
+                        graph.getNodes ().add (nd);
+                        nd.setSubpart (k.S);
+                        nd.setPart (k.F); 
+                        
+                        return nd;
+                    });
+                    
+                    final var nodePoint = node.getPartPoint ();
+                    
+                    final var edge = LevelPassage.of (cnode, node, null);
+                    edge.setPrototype (gate);
+                    
+                    if (!passages.contains (edge)) {
+                        cnode.getNeighbours ().add (edge);                    
+                        node.getNeighbours ().add (edge);
+                        passages.add (edge);
+                    }
+                    
+                    if (!visited.contains (nodePoint)) {
+                        visited.add (nodePoint);
+                        queue.add (nodePoint);
+                    }
+                }
+            }
+        }
+        
+        return graph;
+    }
+    
+    @SuppressWarnings ("unused")
     private static int getRandomIntExcept (int bound, int excpet, Random r) {
         int value = r.nextInt (bound);
         while (value == excpet) {

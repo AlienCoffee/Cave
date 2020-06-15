@@ -21,4 +21,6 @@ public class RenderCell {
     
     private int subpart;
     
+    private boolean exit;
+    
 }

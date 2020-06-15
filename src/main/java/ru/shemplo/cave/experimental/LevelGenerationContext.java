@@ -28,4 +28,8 @@ public class LevelGenerationContext {
     
     private Map <Integer, Map <Integer, List <LevelPassage>>> part2subpart2gates;
     
+    private LevelCell exit;
+    
+    private LevelGenerationGraph graph;
+    
 }

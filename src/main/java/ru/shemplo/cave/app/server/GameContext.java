@@ -70,7 +70,8 @@ public class GameContext {
             final var symbol = String.valueOf (cell.getSymbol ());
             final String cx = String.valueOf (cell.getX () - x), 
                          cy = String.valueOf (cell.getY () - y);
-            cellsJoiner.add (String.join (",", cx, cy, symbol));
+            final var exit = String.valueOf (cell.isExit ());
+            cellsJoiner.add (String.join (",", cx, cy, symbol, exit));
         });
         
         final var gatesJoiner = new StringJoiner ("@");

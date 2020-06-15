@@ -109,7 +109,7 @@ public class ConnectionsPool implements Closeable {
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         state = ServerState.PRE_SATRT;
                         players = countdown.get ();
-                        countdown.set (5);
+                        countdown.set (10);
                         
                         final var generatorThread = new Thread (() -> {
                             context = new GameContext (this, connections);
