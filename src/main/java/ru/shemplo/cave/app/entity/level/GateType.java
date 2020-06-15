@@ -3,6 +3,6 @@ package ru.shemplo.cave.app.entity.level;
 
 public enum GateType {
     
-    GATE, SILT
+    GATE, SLIT
     
 }

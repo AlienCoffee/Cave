@@ -40,7 +40,9 @@ public class ConnectionsPool implements Closeable {
         final var connection = new ClientConnection (id, socket);
         connection.setOnReadMessage (messageComputer::handle);
         connection.setOnHandshakeFinished (() -> {
-            if (newConnectionsAllowed) {                
+            if (newConnectionsAllowed) {
+                connection.sendMessage (EXPEDITION_SIZE.getValue (), String.valueOf (expeditionSize));
+                connection.sendMessage (EXPEDITION_TIME.getValue (), String.valueOf (expeditionTime));
                 synchronized (connections) { 
                     connections.add (connection);
                 }

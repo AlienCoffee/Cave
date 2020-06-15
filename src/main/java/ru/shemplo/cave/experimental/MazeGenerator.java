@@ -539,10 +539,10 @@ public class MazeGenerator {
                 
                 if (cell.getRight () == nei) {
                     addPassage (cell, nei, LevelCell::setRightPass, LevelCell::setLeftPass, (a, b) -> true, null);
-                    cell.getRightPass ().setGateType (GateType.SILT);
+                    cell.getRightPass ().setGateType (GateType.SLIT);
                 } else {
                     addPassage (cell, nei, LevelCell::setBottomPass, LevelCell::setTopPass, (a, b) -> true, null);
-                    cell.getBottomPass ().setGateType (GateType.SILT);
+                    cell.getBottomPass ().setGateType (GateType.SLIT);
                 }
             }
         });

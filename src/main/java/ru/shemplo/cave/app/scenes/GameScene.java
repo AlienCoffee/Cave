@@ -230,7 +230,6 @@ public class GameScene extends AbstractScene {
             synchronized (lock) {                
                 visibleCells.forEach (cell -> {
                     ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
-                    
                     //ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
                     //ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 5, 5);
                 });
@@ -238,12 +237,26 @@ public class GameScene extends AbstractScene {
                 visibleGates.forEach (gate -> {
                     ctx.setFill (gate.getType () == GateType.GATE 
                             ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
-                                    : (gate.getType () == GateType.SILT? Color.ALICEBLUE : Color.BLACK)
+                                    : (gate.getType () == GateType.SLIT ? Color.ALICEBLUE : Color.BLACK)
                             );
-                    if (gate.isVertical ()) {                
-                        ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
-                    } else {                
-                        ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
+                    if (gate.isVertical ()) {
+                        if (gate.getType () == GateType.GATE) {   
+                            final var gatesSkin = gate.isClosed () ? LevelTextures.gatesClosedV : LevelTextures.gatesOpenedV;
+                            //ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
+                            ctx.drawImage (gatesSkin, cx + gate.getX () * ts - 15, cy + gate.getY () * ts - ts / 4, 30, ts / 2);
+                        } else {
+                            final var slitSkin = LevelTextures.gatesClosedV;
+                            ctx.drawImage (slitSkin, cx + gate.getX () * ts - 15, cy + gate.getY () * ts - ts / 4, 30, ts / 2);
+                        }
+                    } else {
+                        if (gate.getType () == GateType.GATE) {
+                            final var gatesSkin = gate.isClosed () ? LevelTextures.gatesClosedH : LevelTextures.gatesOpenedH;
+                            //ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
+                            ctx.drawImage (gatesSkin, cx + gate.getX () * ts - ts / 4 - 4, cy + gate.getY () * ts - 15, ts / 2, 30);
+                        } else {
+                            final var slitSkin = LevelTextures.slitH;
+                            ctx.drawImage (slitSkin, cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 15, ts / 2, 30);
+                        }
                     }
                 });
                 

@@ -61,8 +61,36 @@ public class LevelTextures {
     private static final Image playerSet = new Image (Level.class.getResourceAsStream ("/gfx/player.png"));
     public static final Image player;
     
+
+    public static final Image slitV = new Image (Level.class.getResourceAsStream ("/gfx/slit-tb.png"));
+    public static final Image slitH;
+    
+    public static final Image gatesOpenedV = new Image (Level.class.getResourceAsStream ("/gfx/gates-open-v.png"));
+    public static final Image gatesOpenedH;
+    
+    public static final Image gatesClosedV = new Image (Level.class.getResourceAsStream ("/gfx/gates-closed-v.png"));
+    public static final Image gatesClosedH;
+    
     static {
         player = new WritableImage (playerSet.getPixelReader (), 316, 44, 132, 326);
+        slitH = rotate90 (slitV);
+        
+        gatesClosedH = rotate90 (gatesClosedV);
+        gatesOpenedH = rotate90 (gatesOpenedV);
+    }
+    
+    private static Image rotate90 (Image image) {
+        final int width = (int) image.getHeight (), height = (int)image.getWidth ();
+        final var writable = new WritableImage (width, height);
+        
+        for (int h = 0; h < height; h++) {
+            for (int w = 0; w < width; w++) {
+                final var color = image.getPixelReader ().getColor (h, w);
+                writable.getPixelWriter ().setColor (w, h, color);
+            }
+        }
+        
+        return writable;
     }
     
 }
