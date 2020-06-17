@@ -26,7 +26,7 @@ public class Level {
         context = MazeGenerator.generateMaze (width, height, parts);
         map = context.getMask ();
         
-        System.out.println ("Seed points: " + context.getSeeds ()); // SYSOUT
+        System.out.println ("Seed points: " + context.getPartsSeeds ()); // SYSOUT
         System.out.println ("Exit: " + context.getExit ()); // SYSOUT
         
         System.out.println ("Maze mask:"); // SYSOUT

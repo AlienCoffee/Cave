@@ -72,6 +72,8 @@ public class GameSettingsScene extends AbstractScene {
             });
         } else if (START_COUNTDOWN.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
+                expeditionTimeTF.setDisable (true);
+                expeditorsTF.setDisable (true);
                 backB.setDisable (true);
             });
         } else if (COUNTDOWN.getValue ().equals (parts [1])) {

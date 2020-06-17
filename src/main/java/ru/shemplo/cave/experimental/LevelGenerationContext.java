@@ -6,7 +6,7 @@ import java.util.Map;
 import lombok.AllArgsConstructor;
 import lombok.Builder;
 import lombok.Getter;
-import lombok.NoArgsConstructor;
+import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import ru.shemplo.cave.app.entity.level.LevelCell;
 import ru.shemplo.cave.app.entity.level.LevelPassage;
@@ -14,13 +14,25 @@ import ru.shemplo.cave.utils.IPoint;
 
 @Builder
 @Getter @Setter
-@NoArgsConstructor
 @AllArgsConstructor
+@RequiredArgsConstructor
 public class LevelGenerationContext {
     
-    private LevelCell [][] mask;
+    private final int width, height, parts;
     
-    private List <IPoint> seeds;
+    private LevelCell [][] map;
+    
+    @Deprecated
+    public LevelCell [][] getMask () {
+        return map;
+    }
+    
+    private List <IPoint> partSeeds, spawns;
+    
+    @Deprecated
+    public List <IPoint> getPartsSeeds () {
+        return partSeeds;
+    }
     
     private List <List <LevelCell>> part2cells;
     

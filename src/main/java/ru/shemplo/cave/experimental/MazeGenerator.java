@@ -30,30 +30,30 @@ import ru.shemplo.snowball.stuctures.Trio;
 
 public class MazeGenerator {
     
-    private static final Random r = new Random (1L);
+    private static final Random r = new Random ();
     
-    private static final int parts = 2;
-    private static final int size = parts * 20;
+    private static final int parts = 4;
+    private static final int size = parts * 15;
     
     public static void main (String ... args) {
         final var context = generateMaze (size, size, parts);
         final var maze = context.getMask ();
         
-        System.out.println ("Seed points: " + context.getSeeds ()); // SYSOUT
+        System.out.println ("Seed points: " + context.getPartsSeeds ()); // SYSOUT
         System.out.println ("Exit: " + context.getExit ()); // SYSOUT
         
-        System.out.println ("Maze mask:"); // SYSOUT
+        System.out.println ("Map parts:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 1) {
+                if (maze [i][j].getPart () == 0) {
                     System.out.print ("█"); // SYSOUT
-                } else if (maze [i][j].getPart () == 2) {
+                } else if (maze [i][j].getPart () == 1) {
                     System.out.print ("▒"); // SYSOUT
-                } else if (maze [i][j].getPart () == 3) {
+                } else if (maze [i][j].getPart () == 2) {
                     System.out.print ("▓"); // SYSOUT
-                } else if (maze [i][j].getPart () == 4) {
+                } else if (maze [i][j].getPart () == 3) {
                     System.out.print ("░"); // SYSOUT
-                } else if (maze [i][j].getPart () == 5) {
+                } else if (maze [i][j].getPart () == 4) {
                     System.out.print ("|"); // SYSOUT
                 } else {
                     System.out.print (maze [i][j].getPart ()); // SYSOUT
@@ -62,10 +62,10 @@ public class MazeGenerator {
             System.out.println (); // SYSOUT
         }
         
-        System.out.println ("Maze:"); // SYSOUT
+        System.out.println ("Map part:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 1 && maze [i][j].getSubpart () == 1) {                    
+                if (maze [i][j].getPart () == 0 && maze [i][j].getSubpart () == 0) {                    
                     System.out.print (maze [i][j].getSymbol ()); // SYSOUT
                 } else {
                     System.out.print (" "); // SYSOUT
@@ -74,6 +74,7 @@ public class MazeGenerator {
             System.out.println (); // SYSOUT
         }
         
+        /*
         System.out.println ("Subparts mask:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
@@ -99,6 +100,8 @@ public class MazeGenerator {
             }
             System.out.println (); // SYSOUT
         }
+        System.out.println (); // SYSOUT
+        
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
                 if (maze [i][j].getPart () == 2) {
@@ -123,12 +126,20 @@ public class MazeGenerator {
             }
             System.out.println (); // SYSOUT
         }
+        */
     }
     
     public static LevelGenerationContext generateMaze (int width, int height, int parts) {
+        LevelGenerationContext context = new LevelGenerationContext (width, height, parts);
+        context = generateMap (context);
+        context = generatePartSeeds (context);
+        context = generateParts (context);
+        context = generateSkeletonPath (context);
+        
+        /*
         var context = generateMask (width, height, parts);
         context = generatePassagesTree (context);
-        context = generateSubparts (context, 10);
+        context = generateSubparts (context, 5);
         
         context = generateCyclesWithinSubparts (context, 23);
         context = generateGatesBetweenSubparts (context);
@@ -136,9 +147,173 @@ public class MazeGenerator {
         context = generateExit (context);
         
         context = generateTumblers (context);
+        */
+        
+        //return context;
+        return context;
+    }
+    
+    private static LevelGenerationContext generateMap (LevelGenerationContext context) {
+        final var map = new LevelCell [context.getHeight ()][context.getWidth ()];
+        
+        for (int h = 0; h < map.length; h++) {
+            for (int w = 0; w < map [h].length; w++) {
+                map [h][w] = new LevelCell (w, h);
+                map [h][w].setPart (-1);
+                
+                if (w > 0) {
+                    map [h][w - 1].setRight (map [h][w]);
+                    map [h][w].setLeft (map [h][w - 1]);
+                }
+                
+                if (h > 0) {
+                    map [h - 1][w].setBottom (map [h][w]);
+                    map [h][w].setTop (map [h - 1][w]);
+                }
+            }
+        }
+        
+        context.setMap (map);
+        return context;
+    }
+    
+    private static LevelGenerationContext generatePartSeeds (LevelGenerationContext context) {
+        final var map = context.getMap ();
+        
+        final var minDistance = context.getWidth () * context.getHeight () / 210.0;
+        System.out.println ("Min distance: " + minDistance); // SYSOUT
+        final var seeds = new ArrayList <IPoint> ();
+        
+        pointsLoop:
+        while (seeds.size () < context.getParts ()) {
+            final var y = r.nextInt (map.length);
+            final var x = r.nextInt (map [y].length);
+            
+            for (final var seed : seeds) {
+                if (seed.distance (x, y) < minDistance) {
+                    continue pointsLoop;
+                }
+            }
+            
+            seeds.add (IPoint.of (x, y));
+        }
+        
+        System.out.println ("Part seeds: " + seeds); // SYSOUT
+        context.setPartSeeds (seeds);
+        return context;
+    }
+    
+    private static LevelGenerationContext generateParts (LevelGenerationContext context) {
+        final var seeds = context.getPartSeeds ();
+        final var map = context.getMap ();
+        
+        final var minCriteria = context.getWidth () * context.getHeight () / (context.getParts () + 1);
+        System.out.println ("Min criteria: " + minCriteria); // SYSOUT
+        int attempts = 100;
+        
+        final var part2cells = new ArrayList <List <LevelCell>> ();
+        
+        generatorLoop:
+        while (attempts-- > 0) {
+            for (int h = 0; h < map.length; h++) {
+                for (int w = 0; w < map [h].length; w++) {
+                    map [h][w].setPart (-1);
+                }
+            }
+            
+            final var fronts = new ArrayList <Stack <LevelCell>> ();
+            for (int i = 0; i < context.getParts (); i++) {
+                if (part2cells.size () > i) {
+                    part2cells.get (i).clear ();
+                } else {                    
+                    part2cells.add (new ArrayList <> ());
+                }
+                fronts.add (new Stack <> ());
+                
+                final var seed = seeds.get (i);
+                final var cell = map [seed.Y][seed.X];
+                
+                fronts.get (i).add (cell);
+                cell.setPart (i);
+            }
+            
+            final var permutation = new ArrayList <> (List.of (0, 1, 2, 3));
+            Collections.shuffle (permutation, r); // initial permutation
+            
+            boolean updated = true;
+            while (updated) {
+                updated = false;
+                
+                for (int i = 0; i < fronts.size (); i++) {
+                    final var front = fronts.get (i);
+                    if (front.isEmpty ()) { continue; }
+                    updated = true;
+                    
+                    final var cell = front.pop ();
+                    
+                    final var neis = cell.getMapNeighbours ();
+                    Collections.shuffle (permutation, r);
+                    
+                    for (final var index : permutation) {
+                        final var nei = neis.get (index).F;
+                        if (nei == null) { continue; }
+                        
+                        if (nei.getPart () == -1) {
+                            part2cells.get (cell.getPart ()).add (nei);
+                            nei.setPart (cell.getPart ());
+                            front.add (nei);
+                        }
+                    }
+                }
+            }
+            
+            for (int i = 0; i < part2cells.size (); i++) {
+                if (part2cells.get (i).size () < minCriteria) {
+                    continue generatorLoop;
+                }
+            }
+            
+            break;
+        }
+        
+        System.out.println ("Attempts left: " + attempts); // SYSOUT
+        for (int i = 0; i < part2cells.size (); i++) {
+            System.out.println ("Part #" + i + " has " + part2cells.get (i).size () + " cells"); // SYSOUT
+        }
+        
+        context.setPart2cells (part2cells);
+        return context;
+    }
+    
+    private static LevelGenerationContext generateSkeletonPath (LevelGenerationContext context) {
+        final var borders = new ArrayList <List <LevelCell>> ();
+        final var map = context.getMap ();
+        
+        for (int p = 0; p < context.getParts (); p++) {
+            borders.add (new ArrayList <> ());
+        }
+        
+        for (int h = 0; h < map.length; h++) {
+            for (int w = 0; w < map [h].length; w++) {
+                map [h][w].setPart (-1);
+            }
+        }
         
         return context;
     }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     private static LevelGenerationContext generateMask (int width, int height, int parts) {
         final var part2cells = new ArrayList <List <LevelCell>> ();
@@ -210,9 +385,9 @@ public class MazeGenerator {
         }
         
         return LevelGenerationContext.builder ()
-             . part2cells (part2cells)
-             . seeds (seeds)
-             . mask (maze)
+             //. part2cells (part2cells)
+             . partSeeds (seeds)
+             . map (maze)
              . build ();
     }
     
@@ -275,7 +450,7 @@ public class MazeGenerator {
         final BiPredicate <LevelCell, LevelCell> predicate = (a, b) -> a.getPart () == b.getPart ();
         final var mask = context.getMask ();
         
-        for (final var seed: context.getSeeds ()) {
+        for (final var seed: context.getPartsSeeds ()) {
             final var seedCell = mask [seed.Y][seed.X];
             final var seedCellPoint = seedCell.getPoint (0);
             
@@ -336,7 +511,7 @@ public class MazeGenerator {
         final var mask = context.getMask ();
         
         final var part2subpart2cells = new ArrayList <List <List <LevelCell>>> ();
-        for (int p = 0; p < context.getSeeds ().size (); p++) {
+        for (int p = 0; p < context.getPartsSeeds ().size (); p++) {
             final var partCells = context.getPart2cells ().get (p);
             final var cells = new ArrayList <> (partCells);
             Collections.shuffle (cells, r);
@@ -486,8 +661,15 @@ public class MazeGenerator {
     }
     
     private static LevelGenerationContext generateGatesBetweenSubparts (LevelGenerationContext context) {
-        final var mask = context.getMask ();
+        context = generateGatesOnTreePassages (context);
         
+        
+        
+        return context;
+    }
+    
+    private static LevelGenerationContext generateGatesOnTreePassages (LevelGenerationContext context) {
+        final var mask = context.getMask ();
         final var part2subpart2gates = new HashMap <Integer, Map <Integer, List <LevelPassage>>> ();
         
         for (int h = 0; h < mask.length; h++) {
@@ -578,7 +760,7 @@ public class MazeGenerator {
     }
     
     private static LevelGenerationContext generateExit (LevelGenerationContext context) {
-        final var part = r.nextInt (context.getSeeds ().size ());
+        final var part = r.nextInt (context.getPartsSeeds ().size ());
         final var subpart2cells = context.getPart2subpart2cells ().get (part);
         
         final var exit = subpart2cells.stream ().sorted (Comparator.comparing (List::size))
@@ -608,7 +790,7 @@ public class MazeGenerator {
         
         final var part2walks = new HashMap <Integer, List <LevelPassage>> ();
         
-        for (final var seed : context.getSeeds ()) {
+        for (final var seed : context.getPartsSeeds ()) {
             System.out.println ("Seed: " + seed); // SYSOUT
             final var node = graph.getPart2node ().get (mask [seed.Y][seed.X].getPartPoint ());
             final var walksNisPrimary = generateRandomWalks (graph, node, destination, 11);
@@ -620,19 +802,19 @@ public class MazeGenerator {
             part2walks.put (node.getPart (), walksNisPrimary.F);
         }
         
-        final var order = IntStream.range (1, context.getSeeds ().size () + 1)
+        final var order = IntStream.range (1, context.getPartsSeeds ().size () + 1)
             . filter (i -> i != destination.getPart ()).mapToObj (i -> i)
             . collect (Collectors.toList ());
         Collections.shuffle (order, r);
         // Door to exit will be opened the last
         order.add (destination.getPart ());
         
-        final var inSeed = context.getSeeds ().get (destination.getPart () - 1);
+        final var inSeed = context.getPartsSeeds ().get (destination.getPart () - 1);
         var inPart = mask [inSeed.Y][inSeed.X].getPartPoint ();
         
         final LevelCell [] locations = new LevelCell [order.size ()];
         for (int i = 0; i < order.size (); i++) {
-            final var seed = context.getSeeds ().get (i);
+            final var seed = context.getPartsSeeds ().get (i);
             locations [i] = graph.getPart2node ().get (mask [seed.Y][seed.X].getPartPoint ());
         }
         
@@ -649,13 +831,13 @@ public class MazeGenerator {
                 Collections.shuffle (possibleGates, r);
                 
                 locations [currentPart - 1] = possibleGates.get (0).getAnother (locations [currentPart - 1]);
-                inPart = locations [currentPart - 1].getPartPoint ();
                 
                 final var close = possibleGates.subList (1, possibleGates.size ()).stream ()
                     . map (LevelPassage::getPrototype).collect (Collectors.toList ());
                 final var open = possibleGates.get (0).getPrototype ();
                 
                 final var cells = context.getPart2subpart2cells ().get (inPart.F - 1).get (inPart.S - 1);
+                inPart = locations [currentPart - 1].getPartPoint ();
                 //System.out.println ("Possible cells: " + cells.size ()); // SYSOUT
                 int attempts = 0;
                 do {
@@ -695,7 +877,7 @@ public class MazeGenerator {
                 final var nei = passage.getAnother (currentNode);
                 //System.out.println (nei.getY () + " | " + dists [nei.getY ()][destination.getY ()]); // SYSOUT
                 if ((canReach && stepsLimit >= dists [nei.getY ()][destination.getY ()]) || !canReach) {
-                    //System.out.println (currentNode.getPartPoint () + " -> " + nei.getPartPoint ()); // SYSOUT
+                    System.out.println (currentNode.getPartPoint () + " -> " + nei.getPartPoint ()); // SYSOUT
                     walks.add (passage);
                     currentNode = nei;
                     break;
@@ -710,7 +892,7 @@ public class MazeGenerator {
         final var graph = new LevelGenerationGraph (context);
         
         final var counter = new AtomicInteger ();
-        for (final var seed : context.getSeeds ()) {            
+        for (final var seed : context.getPartsSeeds ()) {            
             final var passages = new HashSet <LevelPassage> ();
             final var queue = new LinkedList <IPoint> ();
             final var visited = new HashSet <IPoint> ();

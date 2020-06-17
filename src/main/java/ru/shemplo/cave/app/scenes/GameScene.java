@@ -13,6 +13,7 @@ import javafx.application.Platform;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
+import javafx.scene.control.TextField;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.HBox;
@@ -34,6 +35,8 @@ public class GameScene extends AbstractScene {
     
     private final Canvas canvasC = new Canvas ();
     private final GraphicsContext ctx = canvasC.getGraphicsContext2D ();
+    
+    private final TextField chatTF = new TextField ();
     
     private final Button backB = new Button ("Back");
     
@@ -140,16 +143,20 @@ public class GameScene extends AbstractScene {
         setTop (menuBox);
         
         menuBox.getChildren ().add (backB);
+        backB.setFocusTraversable (false);
         backB.setOnAction (ae -> {
+            if (serverState != ServerState.FINISH) {
+                app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
+            }
+            
             ApplicationScene.MAIN_MENU.show (app);
         });
-        backB.setDisable (true);
         
         final var canvasBox = new VBox ();
         canvasBox.setFillWidth (true);
         setCenter (canvasBox);
         
-        canvasBox.setBackground (new Background (new BackgroundFill (Color.HOTPINK, null, null)));
+        canvasBox.setBackground (new Background (new BackgroundFill (Color.BLACK, null, null)));
         
         final var canvasStack = new StackPane ();
         canvasBox.getChildren ().add (canvasStack);
@@ -157,6 +164,9 @@ public class GameScene extends AbstractScene {
         canvasC.heightProperty ().bind (canvasBox.heightProperty ());
         canvasC.widthProperty ().bind (canvasBox.widthProperty ());
         canvasStack.getChildren ().add (canvasC);
+        
+        chatTF.setPromptText ("Type message here");
+        setBottom (chatTF);
     }
 
     @Override
