@@ -1,6 +1,7 @@
 package ru.shemplo.cave.experimental;
 
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.Collections;
 import java.util.Comparator;
 import java.util.HashMap;
@@ -9,6 +10,7 @@ import java.util.LinkedList;
 import java.util.List;
 import java.util.Map;
 import java.util.Optional;
+import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
@@ -30,7 +32,7 @@ import ru.shemplo.snowball.stuctures.Trio;
 
 public class MazeGenerator {
     
-    private static final Random r = new Random ();
+    private static final Random r = new Random (1L);
     
     private static final int parts = 4;
     private static final int size = parts * 15;
@@ -45,7 +47,9 @@ public class MazeGenerator {
         System.out.println ("Map parts:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 0) {
+                if (maze [i][j].getPart () == -1) {
+                    System.out.print (" "); // SYSOUT
+                } else if (maze [i][j].getPart () == 0) {
                     System.out.print ("█"); // SYSOUT
                 } else if (maze [i][j].getPart () == 1) {
                     System.out.print ("▒"); // SYSOUT
@@ -62,6 +66,7 @@ public class MazeGenerator {
             System.out.println (); // SYSOUT
         }
         
+        /*
         System.out.println ("Map part:"); // SYSOUT
         for (int i = 0; i < size; i++) {
             for (int j = 0; j < size; j++) {
@@ -73,60 +78,36 @@ public class MazeGenerator {
             }
             System.out.println (); // SYSOUT
         }
-        
-        /*
-        System.out.println ("Subparts mask:"); // SYSOUT
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 1) {
-                    if (maze [i][j].getSubpart () == 10) {
-                        System.out.print ("█"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 11) {
-                        System.out.print ("▒"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 12) {
-                        System.out.print ("▓"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 13) {
-                        System.out.print ("░"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 14) {
-                        System.out.print ("|"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () > 14) {
-                        System.out.print ("*"); // SYSOUT                        
-                    } else {
-                        System.out.print (maze [i][j].getSubpart ()); // SYSOUT
-                    }
-                } else {
-                    System.out.print (" "); // SYSOUT
-                }
-            }
-            System.out.println (); // SYSOUT
-        }
-        System.out.println (); // SYSOUT
-        
-        for (int i = 0; i < size; i++) {
-            for (int j = 0; j < size; j++) {
-                if (maze [i][j].getPart () == 2) {
-                    if (maze [i][j].getSubpart () == 10) {
-                        System.out.print ("█"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 11) {
-                        System.out.print ("▒"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 12) {
-                        System.out.print ("▓"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 13) {
-                        System.out.print ("░"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () == 14) {
-                        System.out.print ("|"); // SYSOUT
-                    } else if (maze [i][j].getSubpart () > 14) {
-                        System.out.print ("*"); // SYSOUT                        
-                    } else {
-                        System.out.print (maze [i][j].getSubpart ()); // SYSOUT
-                    }
-                } else {
-                    System.out.print (" "); // SYSOUT
-                }
-            }
-            System.out.println (); // SYSOUT
-        }
         */
+        
+        System.out.println ("Subparts mask:"); // SYSOUT
+        for (int p = 0; p < context.getParts (); p++) {            
+            for (int i = 0; i < size; i++) {
+                for (int j = 0; j < size; j++) {
+                    if (maze [i][j].getPart () == p) {
+                        if (maze [i][j].getSubpart () == 10) {
+                            System.out.print ("█"); // SYSOUT
+                        } else if (maze [i][j].getSubpart () == 11) {
+                            System.out.print ("▒"); // SYSOUT
+                        } else if (maze [i][j].getSubpart () == 12) {
+                            System.out.print ("▓"); // SYSOUT
+                        } else if (maze [i][j].getSubpart () == 13) {
+                            System.out.print ("░"); // SYSOUT
+                        } else if (maze [i][j].getSubpart () == 14) {
+                            System.out.print ("|"); // SYSOUT
+                        } else if (maze [i][j].getSubpart () > 14) {
+                            System.out.print ("*"); // SYSOUT                        
+                        } else {
+                            System.out.print (maze [i][j].getSubpart ()); // SYSOUT
+                        }
+                    } else {
+                        System.out.print (" "); // SYSOUT
+                    }
+                }
+                System.out.println (); // SYSOUT
+            }
+            System.out.println (); // SYSOUT
+        }
     }
     
     public static LevelGenerationContext generateMaze (int width, int height, int parts) {
@@ -134,7 +115,9 @@ public class MazeGenerator {
         context = generateMap (context);
         context = generatePartSeeds (context);
         context = generateParts (context);
-        context = generateSkeletonPath (context);
+        context = generateSubparts (context);
+        context = generateGraph (context);
+        context = generatePathWithinPart (context);
         
         /*
         var context = generateMask (width, height, parts);
@@ -251,7 +234,7 @@ public class MazeGenerator {
                     
                     final var cell = front.pop ();
                     
-                    final var neis = cell.getMapNeighbours ();
+                    final var neis = cell.getMapNeighbors ();
                     Collections.shuffle (permutation, r);
                     
                     for (final var index : permutation) {
@@ -285,22 +268,280 @@ public class MazeGenerator {
         return context;
     }
     
-    private static LevelGenerationContext generateSkeletonPath (LevelGenerationContext context) {
-        final var borders = new ArrayList <List <LevelCell>> ();
-        final var map = context.getMap ();
+    private static LevelGenerationContext generateSubparts (LevelGenerationContext context) {
+        //final var map = context.getMap ();
+        final var subparts = 5;
+        
+        final var queues = new ArrayList <Queue <LevelCell>> ();
+        final var part2subpart2cells = new ArrayList <List <List <LevelCell>>> ();
         
         for (int p = 0; p < context.getParts (); p++) {
-            borders.add (new ArrayList <> ());
+            final var points = distributePoints (context, p, subparts);
+            part2subpart2cells.add (new ArrayList <> ());
+            
+            for (int i = 0; i < points.size (); i++) {
+                part2subpart2cells.get (p).add (new ArrayList <> ());
+                queues.add (new LinkedList <> ());
+                
+                part2subpart2cells.get (p).get (i).add (points.get (i));
+                queues.get (i).add (points.get (i));
+                points.get (i).setSubpart (i);
+            }
+            
+            boolean updated = true;
+            while (updated) {
+                updated = false;
+                
+                for (int i = 0; i < subparts; i++) {
+                    if (queues.get (i).isEmpty ()) { continue; }
+                    final var cell = queues.get (i).poll ();
+                    updated = true;
+                    
+                    for (final var nei : cell.getMapNeighbors ()) {
+                        if (nei.F == null || nei.F.getPart () != cell.getPart ()) {
+                            continue;
+                        }
+                        
+                        if (nei.F.getSubpart () == -1) {
+                            part2subpart2cells.get (p).get (cell.getSubpart ()).add (nei.F);
+                            nei.F.setSubpart (cell.getSubpart ());
+                            queues.get (i).add (nei.F);
+                        }
+                    }
+                }
+            }
         }
         
-        for (int h = 0; h < map.length; h++) {
-            for (int w = 0; w < map [h].length; w++) {
-                map [h][w].setPart (-1);
+        context.setPart2subpart2cells (part2subpart2cells);
+        return context;
+    }
+    
+    private static List <LevelCell> distributePoints (LevelGenerationContext context, int part, int pointsNumber) {
+        final var cells = context.getPart2cells ().get (part);
+        final var points = new HashSet <IPoint> ();
+        final var map = context.getMap ();
+        
+        final var distances = new double [pointsNumber];
+        fillPoints (cells, points, pointsNumber);
+        var distanceBound = 50.0;
+        
+        while (distanceBound > 0) {
+            final var pointsList = List.copyOf (points);
+            Arrays.fill (distances, 1_000_000.0);
+            
+            for (int i = 0; i < pointsNumber; i++) {
+                final var point  = pointsList.get (i);
+                for (int j = 0; j < pointsNumber; j++) {
+                    if (i == j) { continue; }
+                    
+                    distances [i] = Math.min (distances [i], point.distance (pointsList.get (j)));
+                }
+            }
+            
+            int needToDistribute = -1;
+            for (int i = 0; i < pointsNumber; i++) {
+                if (distances [i] < distanceBound) {
+                    needToDistribute = i;
+                    break;
+                }
+            }
+            
+            if (needToDistribute == -1) {
+                break; // distances between dots is in required bounds
+            } else {
+                points.remove (pointsList.get (needToDistribute));
+                fillPoints (cells, points, pointsNumber);
+                distanceBound -= 0.01;                
+            }
+        }
+        
+        System.out.println ("Set up distance: " + distanceBound); // SYSOUT
+        return points.stream ().map (p -> map [p.Y][p.X]).collect (Collectors.toList ());
+    }
+    
+    private static void fillPoints (List <LevelCell> cells, Set <IPoint> points, int need) {
+        while (points.size () < need) {
+            final var cell = cells.get (r.nextInt (cells.size ()));
+            final var point = cell.getPoint (0);
+            if (!points.contains (point)) {
+                points.add (point);
+            }
+        }
+    }
+    
+    private static LevelGenerationContext generateGraph (LevelGenerationContext context) {
+        final var graph = new LevelGenerationGraph (context);
+        context.setGraph (graph);
+        
+        final var subpart2neigbors = new HashMap <Integer, Set <Integer>> ();
+        final var toAdd = new ArrayList <Integer> ();
+        
+        for (int p = 0; p < context.getParts (); p++) {
+            for (int i = 0; i < context.getPart2subpart2cells ().get (p).size (); i++) {
+                final var node = new LevelCell (0, i);
+                node.setPart (p); node.setSubpart (i);
+                
+                graph.getPart2node ().put (node.getPartPoint (), node);
+                graph.getNodes ().add (node);
+            }
+        }
+        
+        for (int p = 0; p < context.getParts (); p++) {
+            final var subpart2cells = context.getPart2subpart2cells ().get (p);
+            subpart2neigbors.clear ();
+            
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                subpart2neigbors.put (sp, new HashSet <> ());
+            }
+            
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                toAdd.clear ();
+                
+                for (final var cell : subpart2cells.get (sp)) {
+                    final var csp = cell.getSubpart ();
+                    
+                    for (final var nei : cell.getMapNeighbors ()) {
+                        if (nei.F == null || nei.F.getPart () != cell.getPart ()) { 
+                            continue; 
+                        }
+                        
+                        final var nsp = nei.F.getSubpart ();
+                        
+                        if (nsp != csp) {
+                            if (subpart2neigbors.get (csp).add (nsp)) {
+                                toAdd.add (nsp);
+                            }
+                            
+                            subpart2neigbors.get (nsp).add (csp);
+                        }
+                    }
+                }
+                
+                for (final var add : toAdd) {
+                    final var a = graph.getPart2node ().get (IPoint.of (p, sp));
+                    final var b = graph.getPart2node ().get (IPoint.of (p, add));
+                    
+                    final var passage = LevelPassage.of (a, b, null);
+                    a.getNeighbors ().add (passage);
+                    b.getNeighbors ().add (passage);
+                }
             }
         }
         
         return context;
     }
+    
+    private static LevelGenerationContext generatePathWithinPart (LevelGenerationContext context) {
+        final var graph = context.getGraph ();
+        
+        final var part2order = new ArrayList <List <LevelCell>> ();
+        for (int p = 0; p < context.getParts (); p++) {
+            final var subpart2cells = context.getPart2subpart2cells ().get (p);
+            
+            final var nodes = new ArrayList <LevelCell> ();
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                nodes.add (graph.getPart2node ().get (IPoint.of (p, sp)));
+            }
+            
+            final var leafs = nodes.stream ().filter (cell -> cell.getNeighbors ().size () < 2).count ();
+            if (leafs > 2) {
+                throw new IllegalStateException ("Path is impossible");
+            }
+            
+            //nodes.sort (Comparator.comparing (cell -> cell.getNeighbors ().size ()));
+            final var path = new ArrayList <LevelPassage> ();
+            pathLoop: do {
+                Collections.shuffle (nodes, r);
+                path.clear ();
+                
+                for (int n = 0; n < nodes.size () - 1; n++) {
+                    final var next = nodes.get (n + 1);
+                    final var current = nodes.get (n);
+                    
+                    boolean found = false;
+                    for (final var passage : current.getNeighbors ()) {
+                        final var nei = passage.getAnother (current);
+                        if (next.getPart () == nei.getPart () && next.getSubpart () == nei.getSubpart ()) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    
+                    if (!found) {
+                        continue pathLoop;
+                    }
+                }
+                
+                break; // path is generated
+            } while (true);
+            
+            System.out.println ("Paths are generated"); // SYSOUT
+            part2order.add (nodes);
+        }
+        
+        context.setPart2subpartsOrder (part2order);
+        return context;
+    }
+    
+    private static LevelGenerationContext generateTreeWithinSubparts (LevelGenerationContext context) {
+        final var stack = new Stack <LevelCell> ();
+        
+        for (int p = 0; p < context.getParts (); p++) {
+            final var subpart2cells = context.getPart2subpart2cells ().get (p);
+            
+            final var nodes = new ArrayList <LevelCell> ();
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                final var cells = subpart2cells.get (sp);
+                if (cells.isEmpty ()) { continue; }
+                
+                final var ininital = cells.get (0);
+                stack.add (ininital);
+                stack.clear (); 
+            }
+        }
+        
+        return context;
+    }
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
+    
     
     
     
@@ -537,7 +778,7 @@ public class MazeGenerator {
                     final var cellPoint = queue.poll ();
                     final var cell = mask [cellPoint.Y][cellPoint.X];
                     
-                    for (final var passage : cell.getPassageNeighbours ()) {                        
+                    for (final var passage : cell.getPassageNeighbors ()) {                        
                         if (passage.F == null) { continue; }
                         
                         final var nei = passage.F.getAnother (cell);
@@ -581,7 +822,7 @@ public class MazeGenerator {
         relaxLoop:
         for (final var cells : toRelax) {
             for (final var cell : cells) {
-                for (final var passage : cell.getPassageNeighbours ()) {                        
+                for (final var passage : cell.getPassageNeighbors ()) {                        
                     if (passage.F == null) { continue; }
                     
                     final var nei = passage.F.getAnother (cell);
@@ -719,7 +960,7 @@ public class MazeGenerator {
                 final var cell = mask [h][w];
                 final var cp = cell.getPart ();                
                 
-                for (final var neiNoffset : cell.getMapNeighbours ()) {
+                for (final var neiNoffset : cell.getMapNeighbors ()) {
                     if (neiNoffset.F == null) { continue; }
                     final var np = neiNoffset.F.getPart ();
                     if (cp == np) { continue; }
@@ -823,7 +1064,7 @@ public class MazeGenerator {
                 final var walk = part2walks.get (currentPart).get (round);
                 final var walkTo = walk.getAnother (locations [currentPart - 1]);
                 
-                final var possibleGates = locations [currentPart - 1].getNeighbours ().stream ().filter (passage -> {
+                final var possibleGates = locations [currentPart - 1].getNeighbors ().stream ().filter (passage -> {
                     final var nei = passage.getAnother (locations [currentPart - 1]);
                     return nei.getPart () == walkTo.getPart () && nei.getSubpart () == walkTo.getSubpart ();
                 }).collect (Collectors.toList ());
@@ -870,7 +1111,7 @@ public class MazeGenerator {
         var currentNode = node;
         while (stepsLimit-- > 0) {
             //System.out.println ("Steps: " + steps); // SYSOUT
-            final var neis = currentNode.getNeighbours ();
+            final var neis = currentNode.getNeighbors ();
             Collections.shuffle (neis, r);
             
             for (final var passage : neis) {   
@@ -935,8 +1176,8 @@ public class MazeGenerator {
                     edge.setPrototype (gate);
                     
                     if (!passages.contains (edge)) {
-                        cnode.getNeighbours ().add (edge);                    
-                        node.getNeighbours ().add (edge);
+                        cnode.getNeighbors ().add (edge);                    
+                        node.getNeighbors ().add (edge);
                         passages.add (edge);
                     }
                     

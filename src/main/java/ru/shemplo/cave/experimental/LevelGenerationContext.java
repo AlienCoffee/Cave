@@ -38,6 +38,8 @@ public class LevelGenerationContext {
     
     private List <List <List <LevelCell>>> part2subpart2cells;
     
+    private List <List <LevelCell>> part2subpartsOrder;
+    
     private Map <Integer, Map <Integer, List <LevelPassage>>> part2subpart2gates;
     
     private LevelCell exit;

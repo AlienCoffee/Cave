@@ -23,17 +23,17 @@ public class LevelCell implements Comparable <LevelCell> {
     private LevelCell top, right, bottom, left;
     
     // For maze generator purposes only
-    private final List <LevelPassage> neighbours = new ArrayList <> ();
+    private final List <LevelPassage> neighbors = new ArrayList <> ();
     
     private LevelPassage topPass, rightPass, bottomPass, leftPass;
     
     private LevelTumbler tumbler;
     
-    private int part = 0, subpart = 0;
+    private int part = -1, subpart = -1;
     
     private boolean isExit;
     
-    public List <Pair <LevelCell, IPoint>> getMapNeighbours () {
+    public List <Pair <LevelCell, IPoint>> getMapNeighbors () {
         return Arrays.asList  (
             Pair.mp (top,    IPoint.of (-1, 0)),
             Pair.mp (right,  IPoint.of (0, 1)),
@@ -42,7 +42,7 @@ public class LevelCell implements Comparable <LevelCell> {
         );
     }
     
-    public List <Pair <LevelPassage, IPoint>> getPassageNeighbours () {
+    public List <Pair <LevelPassage, IPoint>> getPassageNeighbors () {
         return Arrays.asList (
             Pair.mp (topPass,    IPoint.of (-1, 0)),
             Pair.mp (rightPass,  IPoint.of (0, 1)),
@@ -51,7 +51,7 @@ public class LevelCell implements Comparable <LevelCell> {
         );
     }
     
-    public LevelPassage getPassageNeighbour (int dx, int dy) {
+    public LevelPassage getPassageNeighbor (int dx, int dy) {
         if (dx > 0 && dy == 0) {
             return rightPass;
         } else if (dx < 0 && dy == 0) {

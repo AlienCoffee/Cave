@@ -32,7 +32,7 @@ public class LevelGenerationGraph {
                 final var toNode = nodes.get (j);
                 final var index = i;
                 
-                final var distance = nodes.get (i).getNeighbours ().stream ().<Integer> map (passage -> {
+                final var distance = nodes.get (i).getNeighbors ().stream ().<Integer> map (passage -> {
                     final var nei = passage.getAnother (nodes.get (index));
                     if (nei.getPart () == toNode.getPart () && nei.getSubpart () == toNode.getSubpart ()) {
                         return 1;

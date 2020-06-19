@@ -73,7 +73,7 @@ public class Level {
     public boolean canStepOnFrom (int dx, int dy, int fx, int fy) {
         final var cell = map [fy][fx];
         
-        final var passage = cell.getPassageNeighbour (dx, dy);
+        final var passage = cell.getPassageNeighbor (dx, dy);
         return passage != null && (passage.getGateType () == null || !passage.isClosed ());
     }
     
@@ -94,7 +94,7 @@ public class Level {
                 final var point = queue.poll ();
                 final var cell = map [point.Y][point.X];
                 
-                cell.getPassageNeighbours ().forEach (passage -> {
+                cell.getPassageNeighbors ().forEach (passage -> {
                     if (passage.F == null) { return; }
                     
                     final var nei = passage.F.getAnother (cell);
