@@ -6,5 +6,10 @@
 .classpath
 .project
 
+/dependency-reduced-pom.xml
+
 *.jks
 *.cer
+*.cmd
+*.zip
+*.jar
