@@ -24,41 +24,83 @@ public class Level {
     
     public Level (int width, int height, int parts) {
         context = MazeGenerator.generateMaze (width, height, parts);
-        map = context.getMask ();
+        map = context.getMap ();
         
-        System.out.println ("Seed points: " + context.getPartsSeeds ()); // SYSOUT
+        System.out.println ("Seed points: " + context.getPartSeeds ()); // SYSOUT
+        System.out.println ("Spawns: " + context.getSpawns ()); // SYSOUT
         System.out.println ("Exit: " + context.getExit ()); // SYSOUT
         
-        System.out.println ("Maze mask:"); // SYSOUT
+        System.out.println ("Map parts:"); // SYSOUT
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                if (map [i][j].getPart () == 1) {
-                    System.out.print ("█"); // SYSOUT
+                if (map [i][j].getPart () == -1) {
+                    System.out.print (" ");
+                } else if (map [i][j].getPart () == 0) {
+                    System.out.print ("█");
+                } else if (map [i][j].getPart () == 1) {
+                    System.out.print ("▒");
                 } else if (map [i][j].getPart () == 2) {
-                    System.out.print ("▒"); // SYSOUT
+                    System.out.print ("▓");
                 } else if (map [i][j].getPart () == 3) {
-                    System.out.print ("▓"); // SYSOUT
+                    System.out.print ("░");
                 } else if (map [i][j].getPart () == 4) {
-                    System.out.print ("░"); // SYSOUT
-                } else if (map [i][j].getPart () == 5) {
-                    System.out.print ("|"); // SYSOUT
+                    System.out.print ("|");
                 } else {
-                    System.out.print (map [i][j].getPart ()); // SYSOUT
+                    System.out.print (map [i][j].getPart ());
                 }
             }
-            System.out.println (); // SYSOUT
+            System.out.println ();
         }
         
-        System.out.println ("Maze:"); // SYSOUT
+        System.out.println ("Subparts masks:"); // SYSOUT
+        for (int p = 0; p < context.getParts (); p++) {
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    if (map [i][j].getPart () == p) {
+                        if (map [i][j].getSubpart () == 10) {
+                            System.out.print ("█");
+                        } else if (map [i][j].getSubpart () == 11) {
+                            System.out.print ("▒");
+                        } else if (map [i][j].getSubpart () == 12) {
+                            System.out.print ("▓");
+                        } else if (map [i][j].getSubpart () == 13) {
+                            System.out.print ("░"); 
+                        } else if (map [i][j].getSubpart () == 14) {
+                            System.out.print ("|"); 
+                        } else if (map [i][j].getSubpart () > 14) {
+                            System.out.print ("*");            
+                        } else {
+                            System.out.print (map [i][j].getSubpart ());
+                        }
+                    } else {
+                        System.out.print (" ");
+                    }
+                }
+                System.out.println ();
+            }
+            System.out.println ();
+        }
+        
+        System.out.println ("Subpart trees:"); // SYSOUT
+        for (int p = 0; p < context.getParts (); p++) {            
+            for (int i = 0; i < height; i++) {
+                for (int j = 0; j < width; j++) {
+                    if (map [i][j].getPart () == p && map [i][j].getSubpart () >= 0) {                    
+                        System.out.print (map [i][j].getSymbol ());
+                    } else {
+                        System.out.print (" ");
+                    }
+                }
+                System.out.println ();
+            }
+        }
+        
+        System.out.println ("Maze tree:"); // SYSOUT
         for (int i = 0; i < height; i++) {
             for (int j = 0; j < width; j++) {
-                if (map [i][j].getPart () > 0 && map [i][j].getSubpart () > 0) {                    
-                    System.out.print (map [i][j].getSymbol ()); // SYSOUT
-                } else {
-                    System.out.print (" "); // SYSOUT
-                }
+                System.out.print (map [i][j].getSymbol ());
             }
-            System.out.println (); // SYSOUT
+            System.out.println ();
         }
     }
     

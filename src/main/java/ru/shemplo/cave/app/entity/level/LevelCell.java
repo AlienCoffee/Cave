@@ -31,23 +31,23 @@ public class LevelCell implements Comparable <LevelCell> {
     
     private int part = -1, subpart = -1;
     
-    private boolean isExit;
+    private boolean isExit, isSpawn;
     
     public List <Pair <LevelCell, IPoint>> getMapNeighbors () {
         return Arrays.asList  (
-            Pair.mp (top,    IPoint.of (-1, 0)),
-            Pair.mp (right,  IPoint.of (0, 1)),
-            Pair.mp (bottom, IPoint.of (1, 0)),
-            Pair.mp (left,   IPoint.of (0, -1))
+            Pair.mp (top,    IPoint.of (0, -1)),
+            Pair.mp (right,  IPoint.of (1, 0)),
+            Pair.mp (bottom, IPoint.of (0, 1)),
+            Pair.mp (left,   IPoint.of (-1, 0))
         );
     }
     
     public List <Pair <LevelPassage, IPoint>> getPassageNeighbors () {
         return Arrays.asList (
-            Pair.mp (topPass,    IPoint.of (-1, 0)),
-            Pair.mp (rightPass,  IPoint.of (0, 1)),
-            Pair.mp (bottomPass, IPoint.of (1, 0)),
-            Pair.mp (leftPass,   IPoint.of (0, -1))
+            Pair.mp (topPass,    IPoint.of (0, -1)),
+            Pair.mp (rightPass,  IPoint.of (1, 0)),
+            Pair.mp (bottomPass, IPoint.of (0, 1)),
+            Pair.mp (leftPass,   IPoint.of (-1, 0))
         );
     }
     
@@ -62,7 +62,19 @@ public class LevelCell implements Comparable <LevelCell> {
             return topPass;
         }
         
-        throw new IllegalArgumentException ();
+        throw new IllegalArgumentException (dx + ", " + dy);
+    }
+    
+    public void setPassageNeighbor (int dx, int dy, LevelPassage passage) {
+        if (dx > 0 && dy == 0) {
+            rightPass = passage;
+        } else if (dx < 0 && dy == 0) {
+            leftPass = passage;
+        } else if (dx == 0 && dy > 0) {
+            bottomPass = passage;
+        } else if (dx == 0 && dy < 0) {
+            topPass = passage;
+        }
     }
     
     public IPoint getPoint (double distance) {

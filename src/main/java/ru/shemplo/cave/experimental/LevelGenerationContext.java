@@ -1,7 +1,6 @@
 package ru.shemplo.cave.experimental;
 
 import java.util.List;
-import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -18,7 +17,7 @@ import ru.shemplo.cave.utils.IPoint;
 @RequiredArgsConstructor
 public class LevelGenerationContext {
     
-    private final int width, height, parts;
+    private final int width, height, parts, subparts;
     
     private LevelCell [][] map;
     
@@ -27,7 +26,9 @@ public class LevelGenerationContext {
         return map;
     }
     
-    private List <IPoint> partSeeds, spawns;
+    private List <IPoint> partSeeds;
+    
+    private List <LevelCell> spawns;
     
     @Deprecated
     public List <IPoint> getPartsSeeds () {
@@ -40,7 +41,7 @@ public class LevelGenerationContext {
     
     private List <List <LevelCell>> part2subpartsOrder;
     
-    private Map <Integer, Map <Integer, List <LevelPassage>>> part2subpart2gates;
+    private List <List <LevelPassage>> part2gates;
     
     private LevelCell exit;
     

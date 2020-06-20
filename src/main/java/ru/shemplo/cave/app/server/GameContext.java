@@ -27,15 +27,15 @@ public class GameContext {
         
         final var ps = connections.size ();
         
-        level = new Level (ps * 10, ps * 10, ps);
+        level = new Level (ps * 5, ps * 5, ps);
         final var levelContext = level.getContext ();
         
         int i = 0;
         for (final var connection : connections) {
-            final var seed = levelContext.getPartsSeeds ().get (i++);
+            final var spawns = levelContext.getSpawns ().get (i++);
             id2supermode.put (connection.getId (), false);
-            id2px.put (connection.getId (), seed.X);
-            id2py.put (connection.getId (), seed.Y);
+            id2px.put (connection.getId (), spawns.getX ());
+            id2py.put (connection.getId (), spawns.getY ());
         }
     }
     
