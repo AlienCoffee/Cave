@@ -17,6 +17,7 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import ru.shemplo.cave.app.CaveApplication;
 import ru.shemplo.cave.app.server.ClientConnection;
+import ru.shemplo.cave.app.server.ServerState;
 import ru.shemplo.cave.app.styles.SizeStyles;
 
 public class GameSettingsScene extends AbstractScene {
@@ -81,8 +82,6 @@ public class GameSettingsScene extends AbstractScene {
                 Platform.runLater (() -> {
                     messageL.setText (parts [2] + " seconds to start");
                 });
-            } else {
-                ApplicationScene.GAME.show (app);
             }
         } else if (PLAYER_READY.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
@@ -100,6 +99,13 @@ public class GameSettingsScene extends AbstractScene {
                 expeditionTimeTF.setText (parts [2]);
                 externalUpdate = false;
             });
+        } else if (SERVER_STATE.getValue ().equals (parts [1])) {
+            System.out.println ("Server state: " + parts [2]); // SYSOUT
+            final var serverState = ServerState.valueOf (parts [2]);
+            
+            if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
+                ApplicationScene.GAME.show (app);
+            }
         }
     }
 

@@ -45,7 +45,7 @@ public class ServerMessageHandler {
                 pool.getContext ().applyMove (connection, 0, 0);
             }
             
-            pool.deltaCountdown (1);
+            pool.deltaCounter (1);
         } else if (PLAYER_MOVE.getValue ().equals (parts [1])) {
             final int dx = Integer.parseInt (parts [2]), dy = Integer.parseInt (parts [3]);
             pool.getContext ().applyMove (connection, dx, dy);
@@ -53,6 +53,10 @@ public class ServerMessageHandler {
             pool.getContext ().applyAction (connection, parts [2]);
         } else if (PLAYER_MODE.getValue ().equals (parts [1])) {
             pool.getContext ().applyUserModeToggle (connection);
+        } else if (PLAYER_FOUND_EXIT.getValue ().equals (parts [1])) {
+            if (pool.getContext ().exitFound (connection)) {
+                pool.onExitFound ();
+            }
         } else if (EXPEDITION_SIZE.getValue ().equals (parts [1])) {
             try {
                 final var size = Integer.parseInt (parts [2]);
@@ -81,6 +85,8 @@ public class ServerMessageHandler {
                 if (!c.isAlive ()) { return; }
                 c.sendMessage (EXPEDITION_TIME.getValue (), String.valueOf (pool.getExpeditionTime ()));
             });
+        } else if (CHAT_MESSAGE.getValue ().equals (parts [1])) {
+            pool.broadcastMessage (CHAT_MESSAGE.getValue (), connection.getLogin (), parts [2]);
         }
     }
     

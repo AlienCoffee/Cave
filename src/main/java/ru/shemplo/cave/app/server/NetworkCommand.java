@@ -17,6 +17,7 @@ public enum NetworkCommand {
     EXPEDITION_SIZE ("expedition size"),
     EXPEDITION_TIME ("expedition time"),
     LEAVE_LOBBY ("leave lobby"),
+    CHAT_MESSAGE ("chat message"),
     
     START_COUNTDOWN ("start countdown"),
     COUNTDOWN ("countdown"),
@@ -29,7 +30,8 @@ public enum NetworkCommand {
     PLAYER_ACTION ("player action"),
     PLAYER_MODE ("player mode"),
     PLAYER_LOCATION ("player location"),
-    PLAYERS_LOCATION ("players location")
+    PLAYERS_LOCATION ("players location"),
+    PLAYER_FOUND_EXIT ("player found exit")
     
     ;
     

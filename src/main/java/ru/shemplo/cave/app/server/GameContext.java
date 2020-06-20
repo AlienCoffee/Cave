@@ -143,4 +143,11 @@ public class GameContext {
         applyMove (connection, 0, 0, true);
     }
     
+    public boolean exitFound (ClientConnection connection) {
+        final var id = connection.getId ();
+        
+        final int px = id2px.get (id), py = id2py.get (id);
+        return level.getContext ().getMap () [py][px].isExit ();
+    }
+    
 }

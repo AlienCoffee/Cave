@@ -61,7 +61,7 @@ public class ConnectionsPool implements Closeable {
     @Getter
     private ServerState state = ServerState.RECRUITING;
     
-    private final AtomicInteger countdown = new AtomicInteger ();
+    private final AtomicInteger counter = new AtomicInteger ();
     private volatile int alive = 0, players = 0;
     @Getter private GameContext context;
     
@@ -103,13 +103,13 @@ public class ConnectionsPool implements Closeable {
                 if (state == ServerState.RECRUITING) {
                     newConnectionsAllowed = true;
                     
-                    if (countdown.get () >= expeditionSize) {
+                    if (counter.get () >= expeditionSize) {
                         System.out.println ("Enough players recruited"); // SYSOUT
                         broadcastMessage (SERVER_STATE.getValue (), PRE_SATRT.name ());
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         state = ServerState.PRE_SATRT;
-                        players = countdown.get ();
-                        countdown.set (10);
+                        players = counter.get ();
+                        counter.set (5);
                         
                         final var generatorThread = new Thread (() -> {
                             context = new GameContext (this, connections);
@@ -126,17 +126,17 @@ public class ConnectionsPool implements Closeable {
                 } else if (state == ServerState.PRE_SATRT) {
                     newConnectionsAllowed = false;
                     
-                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (countdown.get ()));
-                    if (countdown.decrementAndGet () <= 0) {
+                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (counter.get () - 1));
+                    if (counter.decrementAndGet () <= 0) {
                         broadcastMessage (SERVER_STATE.getValue (), WAITIN_FOR_PLAYERS.name ());
                         System.out.println ("Pre-start countdown is over"); // SYSOUT
                         state = ServerState.WAITIN_FOR_PLAYERS;
-                        countdown.set (0);
+                        counter.set (0);
                     }
                     
                     if (alive < players) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
-                        countdown.set (5);
+                        counter.set (5);
                         state = FINISH;
                     }
                     
@@ -145,18 +145,18 @@ public class ConnectionsPool implements Closeable {
                         return; 
                     }
                 } else if (state == ServerState.WAITIN_FOR_PLAYERS) {
-                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (countdown.get ()));
-                    if (countdown.get () >= players) {
+                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (players - counter.get ()));
+                    if (counter.get () >= players) {
                         broadcastMessage (SERVER_STATE.getValue (), GAME.name ());
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         System.out.println ("All players are ready"); // SYSOUT
-                        countdown.set (expeditionTime * 60); // game time
+                        counter.set (expeditionTime * 60); // game time
                         state = ServerState.GAME;
                     }
                     
                     if (alive < players) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
-                        countdown.set (5);
+                        counter.set (5);
                         state = FINISH;
                     }
                     
@@ -165,18 +165,18 @@ public class ConnectionsPool implements Closeable {
                         return; 
                     }
                 } else if (state == ServerState.GAME) {
-                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (countdown.get ()));
-                    if (countdown.decrementAndGet () <= 0) {
+                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (counter.get ()));
+                    if (counter.decrementAndGet () <= 0) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "Expedition time is over");
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         System.out.println ("Game time is over"); // SYSOUT
                         state = ServerState.FINISH;
-                        countdown.set (5);
+                        counter.set (5);
                     }
                     
                     if (alive < players) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
-                        countdown.set (5);
+                        counter.set (5);
                         state = FINISH;
                     }
                     
@@ -185,8 +185,8 @@ public class ConnectionsPool implements Closeable {
                         return; 
                     }
                 } else if (state == ServerState.FINISH) {
-                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (countdown.get ()));
-                    if (countdown.decrementAndGet () <= 0) {
+                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (counter.get ()));
+                    if (counter.decrementAndGet () <= 0) {
                         synchronized (connections) {
                             for (final var connection : connections) {
                                 connection.setAlive (false);
@@ -196,6 +196,10 @@ public class ConnectionsPool implements Closeable {
                         broadcastMessage (SERVER_STATE.getValue (), RECRUITING.name ());
                         System.out.println ("Server is waiting for players"); // SYSOUT
                         state = ServerState.RECRUITING;
+                        
+                        expeditionTime = 10;
+                        expeditionSize = 2;
+                        counter.set (0);
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -216,8 +220,16 @@ public class ConnectionsPool implements Closeable {
         }
     }
     
-    public void deltaCountdown (int d) {
-        countdown.addAndGet (d);
+    public void deltaCounter (int d) {
+        counter.addAndGet (d);
+    }
+    
+    public void onExitFound () {
+        if (state != GAME) { return; /* illegal state for this action */ }
+        
+        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "Exit from the cave is found");
+        counter.set (5);
+        state = FINISH;
     }
 
     @Override

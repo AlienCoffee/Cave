@@ -4,7 +4,9 @@ import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
 import java.util.ArrayList;
 import java.util.Arrays;
+import java.util.LinkedList;
 import java.util.List;
+import java.util.Queue;
 import java.util.stream.Collectors;
 
 import javafx.animation.KeyFrame;
@@ -14,6 +16,7 @@ import javafx.scene.canvas.Canvas;
 import javafx.scene.canvas.GraphicsContext;
 import javafx.scene.control.Button;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.HBox;
@@ -22,6 +25,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import javafx.util.Duration;
 import ru.shemplo.cave.app.CaveApplication;
+import ru.shemplo.cave.app.entity.ChatMessage;
 import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.RenderCell;
 import ru.shemplo.cave.app.entity.level.RenderGate;
@@ -46,7 +50,7 @@ public class GameScene extends AbstractScene {
         initView ();
         
         app.getConnection ().setOnReadMessage (this::handleMessage);
-        app.getConnection ().sendMessage (PLAYER_READY.getValue ());
+        startGame ();
     }
     
     private ServerState serverState = ServerState.WAITIN_FOR_PLAYERS;
@@ -65,8 +69,6 @@ public class GameScene extends AbstractScene {
                 app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
                 Platform.runLater (() -> { backB.setDisable (false); });
                 finishReason = parts [3];
-            } else if (serverState == ServerState.GAME) {
-                startGame ();
             }
         } else if (PLAYER_LOCATION.getValue ().equals (parts [1])) {
             mx = Integer.parseInt (parts [2]); my = Integer.parseInt (parts [3]);
@@ -135,6 +137,12 @@ public class GameScene extends AbstractScene {
                 visiblePlayers.clear ();
                 visiblePlayers.addAll (players);
             }
+        } else if (CHAT_MESSAGE.getValue ().equals (parts [1])) {
+            synchronized (chat) {
+                final var time = System.currentTimeMillis ();
+                
+                chat.add (new ChatMessage (parts [2], parts [3], time));
+            }
         }
     }
     
@@ -166,6 +174,18 @@ public class GameScene extends AbstractScene {
         canvasStack.getChildren ().add (canvasC);
         
         chatTF.setPromptText ("Type message here");
+        chatTF.setFocusTraversable (false);
+        chatTF.setOnKeyReleased (ke -> {
+            final var text = chatTF.getText ();
+            if (ke.getCode () == KeyCode.ENTER) {
+                if (!text.isBlank ()) {                    
+                    app.getConnection ().sendMessage (CHAT_MESSAGE.getValue (), text);
+                    chatTF.setText ("");
+                }
+                
+                canvasC.requestFocus ();
+            }
+        });
         setBottom (chatTF);
     }
 
@@ -175,33 +195,44 @@ public class GameScene extends AbstractScene {
         canvasC.requestFocus ();
     }
     
+    private boolean playerReady = false;
+    
     public void startGame () {
         final var connection = app.getConnection ();
         app.getStage ().getScene ().setOnKeyPressed (ke -> {
-            if (serverState != ServerState.GAME) { return; }
-            
-            switch (ke.getCode ()) {
-                case W: {
-                    connection.sendMessage (PLAYER_MOVE.getValue (), "0", "-1");
-                } break;
-                case A: {
-                    connection.sendMessage (PLAYER_MOVE.getValue (), "-1", "0");
-                } break;
-                case S: {
-                    connection.sendMessage (PLAYER_MOVE.getValue (), "0", "1");
-                } break;
-                case D: {
-                    connection.sendMessage (PLAYER_MOVE.getValue (), "1", "0");
-                } break;
-                case ENTER: {
-                    connection.sendMessage (PLAYER_ACTION.getValue (), "tumbler");
-                } break;
-                case M: {
-                    connection.sendMessage (PLAYER_MODE.getValue ());
-                } break;
-                
-                default: break;
+            if (serverState == ServerState.WAITIN_FOR_PLAYERS && !playerReady
+                    && ke.getCode () == KeyCode.ENTER) {
+                app.getConnection ().sendMessage (PLAYER_READY.getValue ());
+                playerReady = true;
+            } else if (serverState == ServerState.GAME) {                
+                switch (ke.getCode ()) {
+                    case W: {
+                        connection.sendMessage (PLAYER_MOVE.getValue (), "0", "-1");
+                    } break;
+                    case A: {
+                        connection.sendMessage (PLAYER_MOVE.getValue (), "-1", "0");
+                    } break;
+                    case S: {
+                        connection.sendMessage (PLAYER_MOVE.getValue (), "0", "1");
+                    } break;
+                    case D: {
+                        connection.sendMessage (PLAYER_MOVE.getValue (), "1", "0");
+                    } break;
+                    case ENTER: {
+                        connection.sendMessage (PLAYER_ACTION.getValue (), "tumbler");
+                    } break;
+                    case M: {
+                        connection.sendMessage (PLAYER_MODE.getValue ());
+                    } break;
+                    case E: {
+                        connection.sendMessage (PLAYER_FOUND_EXIT.getValue ());
+                        System.out.println ("Finish message sent"); // SYSOUT
+                    } break;
+                    
+                    default: break;
+                }
             }
+            
         });
         
         renderPulse.setCycleCount (Timeline.INDEFINITE);
@@ -237,7 +268,15 @@ public class GameScene extends AbstractScene {
         
         if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
             ctx.setFill (Color.YELLOW);
-            ctx.fillText ("Waiting for players", 20, 40);
+            ctx.fillText ("Waiting for players: " + countdown, 20, 40);
+            
+            ctx.setFill (Color.WHEAT);
+            ctx.fillText ("Control: W, A, S, D", 20, 70);
+            ctx.fillText ("Action: Enter", 20, 85);
+            
+            ctx.setFill (Color.SANDYBROWN);
+            ctx.fillText ("Task: found the exit from the cave until expedition time is over", 20, 115);
+            ctx.fillText ("To start the expedition type <Enter> key", 20, 130);
         } else if (serverState == ServerState.GAME) {
             synchronized (lock) {                
                 visibleCells.forEach (cell -> {
@@ -248,6 +287,11 @@ public class GameScene extends AbstractScene {
                     if (cell.isExit ()) {
                         ctx.setFill (Color.WHITESMOKE);
                         ctx.fillRect (cx + cell.getX () * ts - 20, cy + cell.getY () * ts - 20, 40, 40);
+                        
+                        if (cell.getX () == 0 && cell.getY () == 0) { // player stays on this cell
+                            ctx.setFill (Color.SANDYBROWN);
+                            ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
+                        }
                     }
                 });
                 
@@ -294,6 +338,13 @@ public class GameScene extends AbstractScene {
                 });
                 
                 ctx.drawImage (playerSkin, cx - 10, cy - 20, 20, 40);
+                
+                visibleCells.forEach (cell -> {
+                    if (cell.isExit () && cell.getX () == 0 && cell.getY () == 0) { // player stays on exit cell
+                        ctx.setFill (Color.SANDYBROWN);
+                        ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
+                    }
+                });
             }
             
             ctx.setFill (Color.YELLOW);
@@ -304,6 +355,33 @@ public class GameScene extends AbstractScene {
         } else if (serverState == ServerState.FINISH) {
             ctx.setFill (Color.YELLOW);
             ctx.fillText (finishReason, 20, 40);
+        }
+        
+        renderChat ();
+    }
+    
+    private final Queue <ChatMessage> chat = new LinkedList <> ();
+    
+    private void renderChat () {
+        final double ch =  canvasC.getHeight ();
+        
+        synchronized (chat) {            
+            final var time = System.currentTimeMillis ();
+            int counter = 0;
+            
+            for (final var message : chat) {
+                ctx.setFill (Color.WHITE);
+                ctx.fillText (
+                    String.format ("< %s > %s", message.getAuthor (), message.getText ()), 
+                    20, ch - (chat.size () - counter + 1) * 15
+                );
+                
+                counter += 1;
+            }
+            
+            while (!chat.isEmpty () && time - chat.element ().getCreated () >= 15000) { 
+                chat.poll (); // message time expired
+            }
         }
     }
     
