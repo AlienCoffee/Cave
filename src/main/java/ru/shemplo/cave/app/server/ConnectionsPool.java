@@ -8,8 +8,10 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
+import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
+import java.util.stream.Collectors;
 
 import javax.net.ssl.SSLSocket;
 
@@ -42,17 +44,16 @@ public class ConnectionsPool implements Closeable {
         final var connection = new ClientConnection (id, socket);
         connection.setOnReadMessage (messageComputer::handle);
         connection.setOnHandshakeFinished (() -> {
-            if (newConnectionsAllowed) {
-                connection.sendMessage (EXPEDITION_SIZE.getValue (), String.valueOf (expeditionSize));
-                connection.sendMessage (EXPEDITION_TIME.getValue (), String.valueOf (expeditionTime));
-                synchronized (connections) { 
+            synchronized (connection) {
+                if (newConnectionsAllowed) {
+                    connection.sendMessage (CONNECTION_ACCEPTED.getValue ());
                     connections.add (connection);
-                }
-            } else {
-                connection.sendMessage (CONNECTION_REJECTED.getValue (), "New connection rejected by server");
-                try   { connection.close (); } 
-                catch (IOException ioe) {
-                    ioe.printStackTrace ();
+                } else {
+                    connection.sendMessage (CONNECTION_REJECTED.getValue (), "New connection rejected by server");
+                    try   { connection.close (); } 
+                    catch (IOException ioe) {
+                        ioe.printStackTrace ();
+                    }
                 }
             }
         });
@@ -64,8 +65,9 @@ public class ConnectionsPool implements Closeable {
     private ServerState state = ServerState.RECRUITING;
     
     private final AtomicInteger counter = new AtomicInteger ();
-    private volatile int alive = 0, players = 0;
+    private List <ClientConnection > players;
     @Getter private GameContext context;
+    private volatile int alive = 0;
     
     @Setter @Getter
     private int expeditionTime = 10;
@@ -93,7 +95,23 @@ public class ConnectionsPool implements Closeable {
                         alive += connection.isAlive () ? 1 : 0;
                     }
                     
-                    connections.removeIf (cc -> cc.canBeRemoved (this));
+                    final var beforeCleaning = connections.size ();
+                    connections.removeIf (cc -> {
+                        final var canRemove = cc.canBeRemoved (this);
+                        if (canRemove) {
+                            synchronized (readyPlayers) {
+                                readyPlayers.remove (cc.getId ());
+                            }
+                        }
+                        
+                        return canRemove;
+                    });
+                    
+                    final var afterCleaning = connections.size ();
+                    if (beforeCleaning != afterCleaning) {
+                        final var logins = getLobbyPlayers ().stream ().collect (Collectors.joining (","));
+                        broadcastMessage (LOBBY_PLAYERS.getValue (), logins);
+                    }
                 }
                 
                 this.alive = alive;
@@ -118,19 +136,22 @@ public class ConnectionsPool implements Closeable {
                                         connection.setAlive (false);
                                     }
                                 }
+                                
+                                players = connections.stream ().filter (cc -> readyPlayers.contains (cc.getId ()))
+                                        . collect (Collectors.toList ());
                             }
                             
                             System.out.println ("Enough players recruited"); // SYSOUT
                             broadcastMessage (SERVER_STATE.getValue (), PRE_SATRT.name ());
                             broadcastMessage (START_COUNTDOWN.getValue ());
-                            players = readyPlayers.size ();
+                            System.out.println ("Ready players: " + readyPlayers); // SYSOUT
                             state = ServerState.PRE_SATRT;
                             
                             readyPlayers.clear ();
                             counter.set (5);
                             
                             final var generatorThread = new Thread (() -> {
-                                context = new GameContext (this, connections);
+                                context = new GameContext (this, players);
                                 System.out.println ("Context is generated"); // SYSOUT
                             });
                             generatorThread.setDaemon (true);
@@ -153,7 +174,7 @@ public class ConnectionsPool implements Closeable {
                         counter.set (0);
                     }
                     
-                    if (alive < players) {
+                    if (alive < players.size ()) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
                         counter.set (5);
                         state = FINISH;
@@ -164,8 +185,8 @@ public class ConnectionsPool implements Closeable {
                         return; 
                     }
                 } else if (state == ServerState.WAITIN_FOR_PLAYERS) {
-                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (players - counter.get ()));
-                    if (counter.get () >= players) {
+                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (players.size () - counter.get ()));
+                    if (counter.get () >= players.size ()) {
                         broadcastMessage (SERVER_STATE.getValue (), GAME.name ());
                         broadcastMessage (START_COUNTDOWN.getValue ());
                         System.out.println ("All players are ready"); // SYSOUT
@@ -173,7 +194,7 @@ public class ConnectionsPool implements Closeable {
                         state = ServerState.GAME;
                     }
                     
-                    if (alive < players) {
+                    if (alive < players.size ()) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
                         counter.set (5);
                         state = FINISH;
@@ -193,7 +214,7 @@ public class ConnectionsPool implements Closeable {
                         counter.set (5);
                     }
                     
-                    if (alive < players) {
+                    if (alive < players.size ()) {
                         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
                         counter.set (5);
                         state = FINISH;
@@ -241,6 +262,16 @@ public class ConnectionsPool implements Closeable {
     
     public void deltaCounter (int d) {
         counter.addAndGet (d);
+    }
+    
+    public List <String> getLobbyPlayers () {
+        synchronized (connections) {
+            return connections.stream ()
+                 . filter (ClientConnection::isAlive)
+                 . map (ClientConnection::getLogin)
+                 . filter (Objects::nonNull)
+                 . collect (Collectors.toList ());
+        }
     }
     
     public void onExitFound () {

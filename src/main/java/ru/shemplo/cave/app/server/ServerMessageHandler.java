@@ -2,7 +2,6 @@ package ru.shemplo.cave.app.server;
 
 import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
-import java.util.Objects;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
@@ -12,20 +11,18 @@ public class ServerMessageHandler {
     
     private final ConnectionsPool pool;
     
-    public void handle (String [] parts, ClientConnection connection) {
-        if (GET_LOBBY_PLAYERS.getValue ().equals (parts [1])) {
-            final var logins = pool.getConnections ().stream ()
-                . filter (ClientConnection::isAlive)
-                . map (ClientConnection::getLogin)
-                . filter (Objects::nonNull).collect (Collectors.joining (","));
-            connection.sendMessage (LOBBY_PLAYERS.getValue (), logins);
-        } else if (PLAYER.getValue ().equals (parts [1])) {
+    public void handle (String [] parts, ClientConnection connection) {        
+        if (IN_LOBBY.getValue ().equals (parts [1])) {
             connection.setLogin (parts [2]);
             
-            pool.getConnections ().forEach (c -> {
-                if (!c.isAlive ()) { return; }
-                c.sendMessage (PLAYER.getValue (), parts [2]);
-            });
+            connection.sendMessage (EXPEDITION_SIZE.getValue (), String.valueOf (pool.getExpeditionSize ()));
+            connection.sendMessage (EXPEDITION_TIME.getValue (), String.valueOf (pool.getExpeditionTime ()));
+            
+            pool.broadcastMessage (LOBBY_PLAYER.getValue (), parts [2]);
+            handle (new String [] {"", GET_LOBBY_PLAYERS.getValue ()}, connection);
+        } else if (GET_LOBBY_PLAYERS.getValue ().equals (parts [1])) {
+            final var logins = pool.getLobbyPlayers ().stream ().collect (Collectors.joining (","));
+            connection.sendMessage (LOBBY_PLAYERS.getValue (), logins);
         } else if (LEAVE_LOBBY.getValue ().equals (parts [1])) {
             final var login = connection.getLogin ();
             connection.setAlive (false);

@@ -86,7 +86,12 @@ public class GameJoinScene extends AbstractScene {
                             connection.setIdh (parts [0]);
                             
                             app.setConnection (connection);
+                        } else if (CONNECTION_ACCEPTED.getValue ().equals (parts [1])) {
                             ApplicationScene.GAME_SETTINGS.show (app);
+                        } else if (CONNECTION_REJECTED.getValue ().equals (parts [1])) {
+                            Platform.runLater (() -> {                    
+                                messageL.setText (String.valueOf (parts [2]));
+                            });
                         }
                     });                    
                 });

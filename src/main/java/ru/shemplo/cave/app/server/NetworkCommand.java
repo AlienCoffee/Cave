@@ -10,9 +10,10 @@ public enum NetworkCommand {
     IDENTIFIER ("identifier"), PING ("ping"),
     CONNECTION_REJECTED ("connection rejected"),
     CONNECTION_CLOSED ("connection closed"),
+    CONNECTION_ACCEPTED ("connection accepted"),
     
-    PLAYER ("player"),
-    
+    LOBBY_PLAYER ("lobby player"),
+    IN_LOBBY ("lobby players"),
     GET_LOBBY_PLAYERS ("get lobby players"),
     LOBBY_PLAYERS ("lobby players"),
     EXPEDITION_SIZE ("expedition size"),

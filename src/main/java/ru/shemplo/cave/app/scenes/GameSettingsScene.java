@@ -40,8 +40,7 @@ public class GameSettingsScene extends AbstractScene {
         Optional.ofNullable (app.getConnection ()).ifPresentOrElse (connection -> {
             connection.setOnReadMessage (this::handleMessage);
             
-            connection.sendMessage (PLAYER.getValue (), connection.getLogin ());
-            connection.sendMessage (GET_LOBBY_PLAYERS.getValue ());
+            connection.sendMessage (IN_LOBBY.getValue (), connection.getLogin ());
         }, () -> {
             Platform.runLater (() -> {
                 messageL.setText ("Connection is not established");
@@ -53,16 +52,18 @@ public class GameSettingsScene extends AbstractScene {
     private boolean playerReady = false;
     
     private void handleMessage (String [] parts, ClientConnection connection) {
-        if (CONNECTION_REJECTED.getValue ().equals (parts [1])) {
+        if (CONNECTION_CLOSED.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 messageL.setText (parts [2]);
+                readyB.setDisable (true);
+                backB.setDisable (false);
             });
         } else if (LOBBY_PLAYERS.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 messageL.setText (parts [2] + " in lobby");
                 playersLV.getItems ().setAll (parts [2].split (","));
             });
-        } else if (PLAYER.getValue ().equals (parts [1])) {
+        } else if (LOBBY_PLAYER.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 messageL.setText (parts [2] + " joined");
                 playersLV.getItems ().add (parts [2]);
