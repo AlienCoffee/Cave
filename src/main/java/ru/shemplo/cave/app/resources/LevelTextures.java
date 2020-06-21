@@ -93,4 +93,7 @@ public class LevelTextures {
         return writable;
     }
     
+    public static final Image caveBackground = new Image (Level.class.getResourceAsStream ("/gfx/cave-background-2.png"));
+    public static final Image caveIcon = new Image (Level.class.getResourceAsStream ("/gfx/cave.png"));
+    
 }

@@ -1,9 +1,12 @@
 package ru.shemplo.cave.app.scenes;
 
 import javafx.geometry.Pos;
+import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
+import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import ru.shemplo.cave.app.CaveApplication;
+import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.styles.SizeStyles;
 
 public class MainMenuScene extends AbstractScene {
@@ -12,6 +15,8 @@ public class MainMenuScene extends AbstractScene {
     private final Button createGameB = new Button ("Create expedition");
     private final Button exitB = new Button ("Exit");
     
+    private final Canvas canvasC = new Canvas ();
+    
     public MainMenuScene (CaveApplication app) {
         super (app);
         
@@ -19,9 +24,14 @@ public class MainMenuScene extends AbstractScene {
     }
     
     protected void initView () {
+        final var stackP = new StackPane ();
+        setCenter (stackP);
+        
+        stackP.getChildren ().add (canvasC);
+        
         final var menuBox = new VBox (32);
         menuBox.setAlignment (Pos.CENTER);
-        setCenter (menuBox);
+        stackP.getChildren ().add (menuBox);
         
         joinGameB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (joinGameB);
@@ -39,38 +49,21 @@ public class MainMenuScene extends AbstractScene {
             app.getStage ().close ();
         });
     }
-    
-    /*
-    private void testConnection () {
-        //System.setProperty ("javax.net.ssl.trustStorePassword", "");
-        
-        try {
-            final var factory = SSLSocketFactory.getDefault ();            
-            final var socket = (SSLSocket) factory.createSocket ("localhost", 12763);
-            socket.setEnabledCipherSuites (new String [] {
-                "TLS_DHE_DSS_WITH_AES_256_CBC_SHA256"
-            });
-            socket.setEnabledProtocols (new String [] {
-                "TLSv1.2"
-            });
-            
-            //final var params = new SSLParameters ();
-            //params.setEndpointIdentificationAlgorithm ("HTTPS");
-            //socket.setSSLParameters (params);
-            
-            final var out = socket.getOutputStream ();
-            final var in = socket.getInputStream ();
-            
-            System.out.println (new String (in.readNBytes (32), StandardCharsets.UTF_8)); // SYSOUT
-        } catch (IOException ioe) {
-            ioe.printStackTrace ();
-        }
-    }
-    */
 
     @Override
     public void onVisible () {
+        final var context = canvasC.getGraphicsContext2D ();
+        canvasC.setHeight (getHeight ());
+        canvasC.setWidth (getWidth ());
         
+        /*
+        for (double i = 0; i < canvasC.getWidth (); i += 64.0) {            
+            context.drawImage (LevelTextures.caveBackground, i, 0, 64, canvasC.getHeight ());
+        }
+        */
+        
+        final double w = canvasC.getWidth (), h = canvasC.getHeight ();
+        context.drawImage (LevelTextures.caveBackground, 0, 0, w, h);        
     }
     
 }

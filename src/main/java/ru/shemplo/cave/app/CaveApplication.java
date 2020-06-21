@@ -7,6 +7,7 @@ import javafx.scene.layout.Pane;
 import javafx.stage.Stage;
 import lombok.Getter;
 import lombok.Setter;
+import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.scenes.ApplicationScene;
 import ru.shemplo.cave.app.server.ClientConnection;
 
@@ -22,9 +23,11 @@ public class CaveApplication extends Application {
         this.stage = stage;
         
         stage.setFullScreenExitKeyCombination (KeyCombination.NO_MATCH);
+        stage.getIcons ().add (LevelTextures.caveIcon);
         stage.setFullScreenExitHint ("");
         stage.setTitle ("The Cave");
         stage.setMinWidth (600);
+        
         //stage.setFullScreen (true);
         //stage.setResizable (false);
         
