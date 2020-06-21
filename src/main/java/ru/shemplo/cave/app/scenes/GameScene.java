@@ -148,7 +148,7 @@ public class GameScene extends AbstractScene {
     
     protected void initView () {
         final var menuBox = new HBox (8);
-        setTop (menuBox);
+        root.setTop (menuBox);
         
         menuBox.getChildren ().add (backB);
         backB.setFocusTraversable (false);
@@ -162,7 +162,7 @@ public class GameScene extends AbstractScene {
         
         final var canvasBox = new VBox ();
         canvasBox.setFillWidth (true);
-        setCenter (canvasBox);
+        root.setCenter (canvasBox);
         
         canvasBox.setBackground (new Background (new BackgroundFill (Color.BLACK, null, null)));
         
@@ -186,7 +186,7 @@ public class GameScene extends AbstractScene {
                 canvasC.requestFocus ();
             }
         });
-        setBottom (chatTF);
+        root.setBottom (chatTF);
     }
 
     @Override

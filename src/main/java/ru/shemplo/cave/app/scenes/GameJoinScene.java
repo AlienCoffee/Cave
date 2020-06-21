@@ -13,9 +13,12 @@ import javafx.scene.control.Button;
 import javafx.scene.control.Label;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import ru.shemplo.cave.app.CaveApplication;
+import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.styles.SizeStyles;
+import ru.shemplo.cave.utils.Utils;
 
 public class GameJoinScene extends AbstractScene {
 
@@ -34,9 +37,11 @@ public class GameJoinScene extends AbstractScene {
 
     @Override
     protected void initView () {
+        getChildren ().add (0, backgroundC);
+        
         final var menuBox = new VBox (32);
         menuBox.setAlignment (Pos.CENTER);
-        setCenter (menuBox);
+        root.setCenter (menuBox);
         
         loginTF.setMaxWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (loginTF);
@@ -56,6 +61,7 @@ public class GameJoinScene extends AbstractScene {
             }
         });
         
+        messageL.setTextFill (Color.WHITESMOKE);
         menuBox.getChildren ().add (messageL);
         messageL.setWrapText (true);
         
@@ -83,6 +89,7 @@ public class GameJoinScene extends AbstractScene {
                     connection.setOnReadMessage ((parts, c) -> {
                         if (IDENTIFIER.getValue ().equals (parts [1])) {
                             connection.setLogin (loginTF.getText ().trim ());
+                            connection.setIdhh (Utils.digest (parts [0], "salt"));
                             connection.setIdh (parts [0]);
                             
                             app.setConnection (connection);
@@ -110,7 +117,12 @@ public class GameJoinScene extends AbstractScene {
 
     @Override
     public void onVisible () {
+        final var context = backgroundC.getGraphicsContext2D ();
+        backgroundC.setHeight (getHeight ());
+        backgroundC.setWidth (getWidth ());
         
+        final double w = backgroundC.getWidth (), h = backgroundC.getHeight ();
+        context.drawImage (LevelTextures.caveBackground5, 0, 0, w, h);
     }
     
 }

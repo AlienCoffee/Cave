@@ -1,9 +1,7 @@
 package ru.shemplo.cave.app.scenes;
 
 import javafx.geometry.Pos;
-import javafx.scene.canvas.Canvas;
 import javafx.scene.control.Button;
-import javafx.scene.layout.StackPane;
 import javafx.scene.layout.VBox;
 import ru.shemplo.cave.app.CaveApplication;
 import ru.shemplo.cave.app.resources.LevelTextures;
@@ -15,8 +13,6 @@ public class MainMenuScene extends AbstractScene {
     private final Button createGameB = new Button ("Create expedition");
     private final Button exitB = new Button ("Exit");
     
-    private final Canvas canvasC = new Canvas ();
-    
     public MainMenuScene (CaveApplication app) {
         super (app);
         
@@ -24,14 +20,11 @@ public class MainMenuScene extends AbstractScene {
     }
     
     protected void initView () {
-        final var stackP = new StackPane ();
-        setCenter (stackP);
-        
-        stackP.getChildren ().add (canvasC);
+        getChildren ().add (0, backgroundC);
         
         final var menuBox = new VBox (32);
         menuBox.setAlignment (Pos.CENTER);
-        stackP.getChildren ().add (menuBox);
+        root.setCenter (menuBox);
         
         joinGameB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (joinGameB);
@@ -52,18 +45,12 @@ public class MainMenuScene extends AbstractScene {
 
     @Override
     public void onVisible () {
-        final var context = canvasC.getGraphicsContext2D ();
-        canvasC.setHeight (getHeight ());
-        canvasC.setWidth (getWidth ());
+        final var context = backgroundC.getGraphicsContext2D ();
+        backgroundC.setHeight (getHeight ());
+        backgroundC.setWidth (getWidth ());
         
-        /*
-        for (double i = 0; i < canvasC.getWidth (); i += 64.0) {            
-            context.drawImage (LevelTextures.caveBackground, i, 0, 64, canvasC.getHeight ());
-        }
-        */
-        
-        final double w = canvasC.getWidth (), h = canvasC.getHeight ();
-        context.drawImage (LevelTextures.caveBackground, 0, 0, w, h);        
+        final double w = backgroundC.getWidth (), h = backgroundC.getHeight ();
+        context.drawImage (LevelTextures.caveBackground2, 0, 0, w, h);
     }
     
 }

@@ -5,6 +5,7 @@ import static ru.shemplo.cave.app.server.NetworkCommand.*;
 import java.util.stream.Collectors;
 
 import lombok.RequiredArgsConstructor;
+import ru.shemplo.cave.app.entity.LobbyPlayer;
 
 @RequiredArgsConstructor
 public class ServerMessageHandler {
@@ -18,26 +19,23 @@ public class ServerMessageHandler {
             connection.sendMessage (EXPEDITION_SIZE.getValue (), String.valueOf (pool.getExpeditionSize ()));
             connection.sendMessage (EXPEDITION_TIME.getValue (), String.valueOf (pool.getExpeditionTime ()));
             
-            pool.broadcastMessage (LOBBY_PLAYER.getValue (), parts [2]);
+            pool.broadcastMessage (LOBBY_PLAYER.getValue (), parts [2], connection.getIdhh (), "false");
             handle (new String [] {"", GET_LOBBY_PLAYERS.getValue ()}, connection);
         } else if (GET_LOBBY_PLAYERS.getValue ().equals (parts [1])) {
-            final var logins = pool.getLobbyPlayers ().stream ().collect (Collectors.joining (","));
+            final var logins = pool.getLobbyPlayers ().stream ()
+                . map (LobbyPlayer::serialize)
+                . collect (Collectors.joining ("/"));
             connection.sendMessage (LOBBY_PLAYERS.getValue (), logins);
         } else if (LEAVE_LOBBY.getValue ().equals (parts [1])) {
-            final var login = connection.getLogin ();
-            connection.setAlive (false);
-            
-            pool.getConnections ().forEach (c -> {
-                if (!c.isAlive ()) { return; }
-                c.sendMessage (LEAVE_LOBBY.getValue (), login);
-            });
+            pool.broadcastMessage (LEAVE_LOBBY.getValue (), connection.getIdhh ());
+            connection.setAlive (false);            
         } else if (PLAYER_READY.getValue ().equals (parts [1])) {
             if (pool.getState () != ServerState.WAITIN_FOR_PLAYERS
                     && pool.getState () != ServerState.RECRUITING) {
                 return; // wrong state of server for this command
             }
             
-            pool.broadcastMessage (PLAYER_READY.getValue (), connection.getLogin ());
+            pool.broadcastMessage (PLAYER_READY.getValue (), connection.getIdhh ());
             if (pool.getState () == ServerState.WAITIN_FOR_PLAYERS) {
                 pool.getContext ().applyMove (connection, 0, 0);
                 pool.deltaCounter (1);
@@ -49,7 +47,7 @@ public class ServerMessageHandler {
                 return; // wrong state of server for this command
             }
             
-            pool.broadcastMessage (PLAYER_NOT_READY.getValue (), connection.getLogin ());
+            pool.broadcastMessage (PLAYER_NOT_READY.getValue (), connection.getIdhh ());
             if (pool.getState () == ServerState.RECRUITING) {
                 pool.onPlayerReadyStateChanged (connection, false);
             }

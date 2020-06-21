@@ -26,8 +26,14 @@ public class Utils {
         try {
             final var digest = MessageDigest.getInstance ("SHA3-256");
             
-            final var bytes = String.format ("%s-%s", string, salt).getBytes (StandardCharsets.UTF_8);
-            return flatString (new String (digest.digest (bytes), StandardCharsets.UTF_8));
+            final var input = String.format ("%s-%s", string, salt).getBytes (StandardCharsets.UTF_8);
+            final var bytes = digest.digest (input);
+            final var sb = new StringBuilder ();
+            for (int i = 0; i < bytes.length; i++) {
+                sb.append (String.format ("%02x", bytes [i]));
+            }
+            
+            return sb.toString ();
         } catch (NoSuchAlgorithmException nsae) {
             throw new IllegalStateException ();
         }

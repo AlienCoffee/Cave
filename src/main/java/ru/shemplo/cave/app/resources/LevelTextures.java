@@ -93,7 +93,13 @@ public class LevelTextures {
         return writable;
     }
     
-    public static final Image caveBackground = new Image (Level.class.getResourceAsStream ("/gfx/cave-background-2.png"));
+    public static final Image caveBackground2 = new Image (Level.class.getResourceAsStream ("/gfx/cave-background-2.png"));
+    public static final Image caveBackground3 = new Image (Level.class.getResourceAsStream ("/gfx/cave-background-3.jpg"));
+    public static final Image caveBackground4 = new Image (Level.class.getResourceAsStream ("/gfx/cave-background-4.jpg"));
+    public static final Image caveBackground5 = new Image (Level.class.getResourceAsStream ("/gfx/cave-background-5.png"));
     public static final Image caveIcon = new Image (Level.class.getResourceAsStream ("/gfx/cave.png"));
+    
+    public static final Image crossIcon = new Image (Level.class.getResourceAsStream ("/gfx/criss-cross.png"));
+    public static final Image tickIcon = new Image (Level.class.getResourceAsStream ("/gfx/tick.png"));
     
 }

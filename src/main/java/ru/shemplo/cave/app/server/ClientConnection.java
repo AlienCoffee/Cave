@@ -25,7 +25,8 @@ public class ClientConnection implements Closeable {
     
     private final SSLSocket socket;
     
-    @Setter private String idh;
+    @Setter @Getter private String idhh;
+    @Setter @Getter private String idh;
     @Getter private final int id;
     
     private final OutputStream os;
@@ -133,7 +134,7 @@ public class ClientConnection implements Closeable {
         
         if (!isClosed) {
             System.out.println ("Killing #" + id + " before remove"); // SYSOUT
-            pool.broadcastMessage (LEAVE_LOBBY.getValue (), getLogin ());
+            pool.broadcastMessage (LEAVE_LOBBY.getValue (), getIdhh ());
             
             try   { close (); }
             catch (IOException e) {}

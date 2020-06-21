@@ -5,24 +5,36 @@ package ru.shemplo.cave.app.scenes;
 import static ru.shemplo.cave.app.server.NetworkCommand.*;
 
 import java.io.IOException;
+import java.util.Arrays;
 import java.util.Optional;
+import java.util.stream.Collectors;
 
 import javafx.application.Platform;
+import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
+import javafx.scene.control.FocusModel;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.layout.Background;
+import javafx.scene.layout.BackgroundFill;
+import javafx.scene.layout.BorderPane;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
+import javafx.scene.paint.Color;
 import ru.shemplo.cave.app.CaveApplication;
+import ru.shemplo.cave.app.LobbyListCell;
+import ru.shemplo.cave.app.entity.LobbyPlayer;
+import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.server.ServerState;
 import ru.shemplo.cave.app.styles.SizeStyles;
+import ru.shemplo.cave.utils.EmptySelectionModel;
 
 public class GameSettingsScene extends AbstractScene {
 
-    private final ListView <String> playersLV = new ListView <> ();
+    private final ListView <LobbyPlayer> playersLV = new ListView <> ();
     
     private final TextField expeditionTimeTF = new TextField ();
     private final TextField expeditorsTF = new TextField ();
@@ -54,29 +66,53 @@ public class GameSettingsScene extends AbstractScene {
     private void handleMessage (String [] parts, ClientConnection connection) {
         if (CONNECTION_CLOSED.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
+                expeditionTimeTF.setDisable (true);
+                expeditorsTF.setDisable (true);
                 messageL.setText (parts [2]);
                 readyB.setDisable (true);
                 backB.setDisable (false);
             });
         } else if (LOBBY_PLAYERS.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
-                messageL.setText (parts [2] + " in lobby");
-                playersLV.getItems ().setAll (parts [2].split (","));
+                final var players = Arrays.stream (parts [2].split ("/"))
+                    . map (str -> {
+                        final var playerParts = str.split (",");
+                        
+                        final var ready = Boolean.parseBoolean (playerParts [2]);
+                        return new LobbyPlayer (playerParts [0], playerParts [1], ready);
+                    })
+                    . collect (Collectors.toList ());
+                playersLV.getItems ().setAll (players);
             });
         } else if (LOBBY_PLAYER.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 messageL.setText (parts [2] + " joined");
-                playersLV.getItems ().add (parts [2]);
+                
+                final var ready = Boolean.parseBoolean (parts [4]);
+                final var player = new LobbyPlayer (parts [2], parts [3], ready);
+                playersLV.getItems ().add (player);
             });
         } else if (LEAVE_LOBBY.getValue ().equals (parts [1])) {
-            Platform.runLater (() -> {
-                messageL.setText (parts [2] + " leaved");
-                playersLV.getItems ().remove (parts [2]);
-            });
+            synchronized (playersLV) {
+                Platform.runLater (() -> {                    
+                    playersLV.getItems ().removeIf (p -> {
+                        final var found = p.getIdhh ().equals (parts [2]);
+                        if (found) {
+                            System.out.println ("Leaver found: " + p.getLogin ()); // SYSOUT
+                            Platform.runLater (() -> {
+                                messageL.setText (p.getLogin () + " leaved");
+                            });
+                        }
+                        
+                        return found;
+                    });
+                });
+            }
         } else if (START_COUNTDOWN.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 expeditionTimeTF.setDisable (true);
                 expeditorsTF.setDisable (true);
+                readyB.setDisable (true);
                 backB.setDisable (true);
             });
         } else if (COUNTDOWN.getValue ().equals (parts [1])) {
@@ -86,29 +122,43 @@ public class GameSettingsScene extends AbstractScene {
                 });
             }
         } else if (PLAYER_READY.getValue ().equals (parts [1])) {
-            if (app.getConnection ().getLogin ().equals (parts [2])) {
+            if (app.getConnection ().getIdhh ().equals (parts [2])) {
                 playerReady = true;
                 Platform.runLater (() -> {
                     readyB.setText ("Not ready");
                     readyB.setDisable (false);
                 });
-            } else {
-                Platform.runLater (() -> {
-                    messageL.setText (parts [2] + " is ready");
-                });
             }
+            
+            Platform.runLater (() -> {
+                playersLV.getItems ().forEach (player -> {
+                    if (player.getIdhh ().equals (parts [2])) {
+                        messageL.setText (player.getLogin () + " is ready");
+                        player.setReady (true);
+                    }
+                });
+                
+                playersLV.refresh ();
+            });
         } else if (PLAYER_NOT_READY.getValue ().equals (parts [1])) {
-            if (app.getConnection ().getLogin ().equals (parts [2])) {                
+            if (app.getConnection ().getIdhh ().equals (parts [2])) {
                 playerReady = false;
                 Platform.runLater (() -> {
-                    readyB.setDisable (false);
                     readyB.setText ("Ready");
-                });
-            } else {
-                Platform.runLater (() -> {
-                    messageL.setText (parts [2] + " is not ready");
+                    readyB.setDisable (false);
                 });
             }
+            
+            Platform.runLater (() -> {
+                playersLV.getItems ().forEach (player -> {
+                    if (player.getIdhh ().equals (parts [2])) {
+                        messageL.setText (player.getLogin () + " is not ready");
+                        player.setReady (false);
+                    }
+                });
+                
+                playersLV.refresh ();
+            });
         } else if (EXPEDITION_SIZE.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 externalUpdate = true;
@@ -133,11 +183,36 @@ public class GameSettingsScene extends AbstractScene {
 
     @Override
     protected void initView () {
-        setLeft (playersLV);
+        getChildren ().add (0, backgroundC);
+        
+        final var leftBox = new VBox ();
+        BorderPane.setMargin (leftBox, new Insets (0, 0, 0, 64));
+        leftBox.setAlignment (Pos.CENTER_RIGHT);
+        root.setLeft (leftBox);
+        
+        playersLV.setSelectionModel (new EmptySelectionModel <> ());
+        playersLV.setCellFactory (__ -> new LobbyListCell ());
+        playersLV.setBackground (Background.EMPTY);
+        playersLV.setFocusTraversable (false);
+        playersLV.setFocusModel (new FocusModel <> () {
+            @Override
+            protected LobbyPlayer getModelItem (int index) {
+                return null;
+            }
+            
+            @Override
+            protected int getItemCount () {
+                return 0;
+            }
+        });
+        leftBox.getChildren ().add (playersLV);
         
         final var menuBox = new VBox (32);
+        menuBox.setBackground (new Background (new BackgroundFill (Color.color (0.75, 0.75, 0.75, 0.25), null, null)));
+        BorderPane.setMargin (menuBox, new Insets (0, 64, 0, 0));
+        menuBox.setPadding (new Insets (0, 16, 0, 16));
         menuBox.setAlignment (Pos.CENTER);
-        setCenter (menuBox);
+        root.setRight (menuBox);
         
         final var expeditorsBox = new HBox (8);
         menuBox.getChildren ().add (expeditorsBox);
@@ -145,9 +220,10 @@ public class GameSettingsScene extends AbstractScene {
         
         final var expeditorsL = new Label ("Expeditors:");
         expeditorsBox.getChildren ().add (expeditorsL);
+        expeditorsL.setTextFill (Color.WHITESMOKE);
         
         expeditorsBox.getChildren ().add (expeditorsTF);
-        expeditorsTF.setPrefWidth (130);
+        expeditorsTF.setPrefWidth (132);
         expeditorsTF.textProperty ().addListener ((__, ___, cur) -> {
             if (cur.isBlank () || externalUpdate) { return; }
             final var value = cur.trim ();
@@ -166,6 +242,7 @@ public class GameSettingsScene extends AbstractScene {
         
         final var timeL = new Label ("Expedition time (minutes):");
         expeditionTimeBox.getChildren ().add (timeL);
+        timeL.setTextFill (Color.WHITESMOKE);
         
         expeditionTimeBox.getChildren ().add (expeditionTimeTF);
         expeditionTimeTF.setPrefWidth (50);
@@ -190,6 +267,7 @@ public class GameSettingsScene extends AbstractScene {
             });
         });
         
+        messageL.setTextFill (Color.WHITESMOKE);
         menuBox.getChildren ().add (messageL);
         messageL.setWrapText (true);
         
@@ -207,7 +285,14 @@ public class GameSettingsScene extends AbstractScene {
 
     @Override
     public void onVisible () {
+        playersLV.setMaxHeight (getHeight () / 2);
         
+        final var context = backgroundC.getGraphicsContext2D ();
+        backgroundC.setHeight (getHeight ());
+        backgroundC.setWidth (getWidth ());
+        
+        final double w = backgroundC.getWidth (), h = backgroundC.getHeight ();
+        context.drawImage (LevelTextures.caveBackground4, 0, 0, w, h);
     }
     
 }

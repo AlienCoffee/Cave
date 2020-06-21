@@ -8,7 +8,6 @@ import java.io.IOException;
 import java.util.ArrayList;
 import java.util.HashSet;
 import java.util.List;
-import java.util.Objects;
 import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 import java.util.stream.Collectors;
@@ -18,7 +17,9 @@ import javax.net.ssl.SSLSocket;
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
 import lombok.Setter;
+import ru.shemplo.cave.app.entity.LobbyPlayer;
 import ru.shemplo.cave.utils.TimeoutActionExecutor;
+import ru.shemplo.cave.utils.Utils;
 
 @RequiredArgsConstructor
 public class ConnectionsPool implements Closeable {
@@ -46,6 +47,7 @@ public class ConnectionsPool implements Closeable {
         connection.setOnHandshakeFinished (() -> {
             synchronized (connection) {
                 if (newConnectionsAllowed) {
+                    connection.setIdhh (Utils.digest (connection.getIdh (), "salt"));
                     connection.sendMessage (CONNECTION_ACCEPTED.getValue ());
                     connections.add (connection);
                 } else {
@@ -109,7 +111,9 @@ public class ConnectionsPool implements Closeable {
                     
                     final var afterCleaning = connections.size ();
                     if (beforeCleaning != afterCleaning) {
-                        final var logins = getLobbyPlayers ().stream ().collect (Collectors.joining (","));
+                        final var logins = getLobbyPlayers ().stream ()
+                            . map (LobbyPlayer::serialize)
+                            . collect (Collectors.joining ("/"));
                         broadcastMessage (LOBBY_PLAYERS.getValue (), logins);
                     }
                 }
@@ -264,13 +268,16 @@ public class ConnectionsPool implements Closeable {
         counter.addAndGet (d);
     }
     
-    public List <String> getLobbyPlayers () {
+    public List <LobbyPlayer> getLobbyPlayers () {
         synchronized (connections) {
-            return connections.stream ()
-                 . filter (ClientConnection::isAlive)
-                 . map (ClientConnection::getLogin)
-                 . filter (Objects::nonNull)
-                 . collect (Collectors.toList ());
+            synchronized (readyPlayers) {                
+                return connections.stream ().filter (ClientConnection::isAlive)
+                     . map (cc -> {
+                         final var ready = readyPlayers.contains (cc.getId ());
+                         return new LobbyPlayer (cc.getLogin (), cc.getIdhh (), ready);
+                     })
+                     . collect (Collectors.toList ());
+            }
         }
     }
     
