@@ -50,6 +50,7 @@ public class GameSettingsScene extends AbstractScene {
     }
     
     private boolean externalUpdate = false;
+    private boolean playerReady = false;
     
     private void handleMessage (String [] parts, ClientConnection connection) {
         if (CONNECTION_REJECTED.getValue ().equals (parts [1])) {
@@ -84,9 +85,29 @@ public class GameSettingsScene extends AbstractScene {
                 });
             }
         } else if (PLAYER_READY.getValue ().equals (parts [1])) {
-            Platform.runLater (() -> {
-                readyB.setText ("Not ready");
-            });
+            if (app.getConnection ().getLogin ().equals (parts [2])) {
+                playerReady = true;
+                Platform.runLater (() -> {
+                    readyB.setText ("Not ready");
+                    readyB.setDisable (false);
+                });
+            } else {
+                Platform.runLater (() -> {
+                    messageL.setText (parts [2] + " is ready");
+                });
+            }
+        } else if (PLAYER_NOT_READY.getValue ().equals (parts [1])) {
+            if (app.getConnection ().getLogin ().equals (parts [2])) {                
+                playerReady = false;
+                Platform.runLater (() -> {
+                    readyB.setDisable (false);
+                    readyB.setText ("Ready");
+                });
+            } else {
+                Platform.runLater (() -> {
+                    messageL.setText (parts [2] + " is not ready");
+                });
+            }
         } else if (EXPEDITION_SIZE.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 externalUpdate = true;
@@ -162,8 +183,9 @@ public class GameSettingsScene extends AbstractScene {
         readyB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (readyB);
         readyB.setOnAction (ae -> {
+            readyB.setDisable (true);
             Optional.ofNullable (app.getConnection ()).ifPresent (connection -> {
-                connection.sendMessage (PLAYER_READY.getValue ());
+                connection.sendMessage (playerReady ? PLAYER_NOT_READY.getValue () : PLAYER_READY.getValue ());
             });
         });
         

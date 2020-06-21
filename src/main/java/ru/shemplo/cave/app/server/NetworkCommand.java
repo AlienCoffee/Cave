@@ -9,6 +9,7 @@ public enum NetworkCommand {
     
     IDENTIFIER ("identifier"), PING ("ping"),
     CONNECTION_REJECTED ("connection rejected"),
+    CONNECTION_CLOSED ("connection closed"),
     
     PLAYER ("player"),
     
@@ -23,6 +24,7 @@ public enum NetworkCommand {
     COUNTDOWN ("countdown"),
     
     PLAYER_READY ("player ready"),
+    PLAYER_NOT_READY ("player not ready"),
     
     SERVER_STATE ("server state"),
     

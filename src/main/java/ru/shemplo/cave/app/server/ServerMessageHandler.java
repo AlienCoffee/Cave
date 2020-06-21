@@ -40,12 +40,22 @@ public class ServerMessageHandler {
                 return; // wrong state of server for this command
             }
             
-            connection.sendMessage (PLAYER_READY.getValue ());
+            pool.broadcastMessage (PLAYER_READY.getValue (), connection.getLogin ());
             if (pool.getState () == ServerState.WAITIN_FOR_PLAYERS) {
                 pool.getContext ().applyMove (connection, 0, 0);
+                pool.deltaCounter (1);
+            } else if (pool.getState () == ServerState.RECRUITING) {
+                pool.onPlayerReadyStateChanged (connection, true);
+            }
+        } else if (PLAYER_NOT_READY.getValue ().equals (parts [1])) {
+            if (pool.getState () != ServerState.RECRUITING) {
+                return; // wrong state of server for this command
             }
             
-            pool.deltaCounter (1);
+            pool.broadcastMessage (PLAYER_NOT_READY.getValue (), connection.getLogin ());
+            if (pool.getState () == ServerState.RECRUITING) {
+                pool.onPlayerReadyStateChanged (connection, false);
+            }
         } else if (PLAYER_MOVE.getValue ().equals (parts [1])) {
             final int dx = Integer.parseInt (parts [2]), dy = Integer.parseInt (parts [3]);
             pool.getContext ().applyMove (connection, dx, dy);

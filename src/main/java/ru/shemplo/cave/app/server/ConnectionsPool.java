@@ -6,7 +6,9 @@ import static ru.shemplo.cave.app.server.ServerState.*;
 import java.io.Closeable;
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.HashSet;
 import java.util.List;
+import java.util.Set;
 import java.util.concurrent.atomic.AtomicInteger;
 
 import javax.net.ssl.SSLSocket;
@@ -71,6 +73,8 @@ public class ConnectionsPool implements Closeable {
     @Setter @Getter
     private int expeditionSize = 2;
     
+    private final Set <Integer> readyPlayers = new HashSet <> ();
+    
     public void open () {
         listener = new Thread (() -> {
             while (!Thread.currentThread ().isInterrupted ()) {
@@ -103,20 +107,35 @@ public class ConnectionsPool implements Closeable {
                 if (state == ServerState.RECRUITING) {
                     newConnectionsAllowed = true;
                     
-                    if (counter.get () >= expeditionSize) {
-                        System.out.println ("Enough players recruited"); // SYSOUT
-                        broadcastMessage (SERVER_STATE.getValue (), PRE_SATRT.name ());
-                        broadcastMessage (START_COUNTDOWN.getValue ());
-                        state = ServerState.PRE_SATRT;
-                        players = counter.get ();
-                        counter.set (5);
-                        
-                        final var generatorThread = new Thread (() -> {
-                            context = new GameContext (this, connections);
-                            System.out.println ("Context is generated"); // SYSOUT
-                        });
-                        generatorThread.setDaemon (true);
-                        generatorThread.start ();
+                    synchronized (readyPlayers) {                        
+                        if (readyPlayers.size () >= expeditionSize) {
+                            synchronized (connections) {
+                                newConnectionsAllowed = false;
+                                
+                                for (final var connection : connections) {
+                                    if (!readyPlayers.contains (connection.getId ())) {
+                                        connection.sendMessage (CONNECTION_CLOSED.getValue (), "Connection closed by server");
+                                        connection.setAlive (false);
+                                    }
+                                }
+                            }
+                            
+                            System.out.println ("Enough players recruited"); // SYSOUT
+                            broadcastMessage (SERVER_STATE.getValue (), PRE_SATRT.name ());
+                            broadcastMessage (START_COUNTDOWN.getValue ());
+                            players = readyPlayers.size ();
+                            state = ServerState.PRE_SATRT;
+                            
+                            readyPlayers.clear ();
+                            counter.set (5);
+                            
+                            final var generatorThread = new Thread (() -> {
+                                context = new GameContext (this, connections);
+                                System.out.println ("Context is generated"); // SYSOUT
+                            });
+                            generatorThread.setDaemon (true);
+                            generatorThread.start ();
+                        }
                     }
                     
                     try { Thread.sleep (500); } catch (InterruptedException ie) { 
@@ -230,6 +249,16 @@ public class ConnectionsPool implements Closeable {
         broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "Exit from the cave is found");
         counter.set (5);
         state = FINISH;
+    }
+    
+    public void onPlayerReadyStateChanged (ClientConnection connection, boolean ready) {
+        synchronized (readyPlayers) {
+            if (ready) {
+                readyPlayers.add (connection.getId ());
+            } else {
+                readyPlayers.remove (connection.getId ());
+            }
+        }
     }
 
     @Override
