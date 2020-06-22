@@ -60,9 +60,10 @@ public class GameContext {
             py = id2py.compute (id, (__, v) -> v + dy);
         }
         
+        final double illumination = 1.0;
         final int x = px, y = py;
         
-        final var visibleCells = level.getVisibleCells (px, py, 2.0);
+        final var visibleCells = level.getVisibleCells (px, py, illumination);
         final var cellsJoiner = new StringJoiner ("@");
         cellsJoiner.add (""); cellsJoiner.add ("");
         
@@ -76,7 +77,7 @@ public class GameContext {
         
         final var gatesJoiner = new StringJoiner ("@");
         gatesJoiner.add (""); gatesJoiner.add ("");
-        level.getVisibleGates (px, py, 2.0).forEach (gate -> {
+        level.getVisibleGates (px, py, illumination).forEach (gate -> {
             final var vertical = String.valueOf (gate.isVertical ());
             final var closed = String.valueOf (gate.isClosed ());
             final var type = String.valueOf (gate.getType ());

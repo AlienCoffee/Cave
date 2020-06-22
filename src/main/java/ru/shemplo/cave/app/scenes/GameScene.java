@@ -281,8 +281,10 @@ public class GameScene extends AbstractScene {
             synchronized (lock) {                
                 visibleCells.forEach (cell -> {
                     ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
-                    //ctx.setFill (subpartColors.get (cell.getSubpart () % subpartColors.size ()));
-                    //ctx.fillRect (cx + (cell.getX () - 0.5) * ts + 10, cy + (cell.getY () - 0.5) * ts + 10, 5, 5);
+                    /*
+                    ctx.drawImage (LevelTextures.decorationGoldPieces, cx + (cell.getX () - 0.5) * ts + 40, 
+                            cy + (cell.getY () - 0.5) * ts + 40, 24, 24);
+                            */
                     
                     if (cell.isExit ()) {
                         ctx.setFill (Color.WHITESMOKE);

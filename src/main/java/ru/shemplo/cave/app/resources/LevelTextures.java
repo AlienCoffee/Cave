@@ -29,6 +29,9 @@ public class LevelTextures {
     private static final Image tunnelRB   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-rb.png"));
     private static final Image tunnel0    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-0.png"));
     
+    public static final Image decorationSkull      = new Image (Level.class.getResourceAsStream ("/gfx/skull.png"));
+    public static final Image decorationGoldPieces = new Image (Level.class.getResourceAsStream ("/gfx/gold-pieces.png"));
+    
     public static final Image tumblerOn  = new Image (Level.class.getResourceAsStream ("/gfx/tumbler-on.png"));
     public static final Image tumblerOff = new Image (Level.class.getResourceAsStream ("/gfx/tumbler-off.png"));
     

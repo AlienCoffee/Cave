@@ -7,10 +7,12 @@ import java.util.HashMap;
 import java.util.HashSet;
 import java.util.LinkedList;
 import java.util.List;
+import java.util.Optional;
 import java.util.Queue;
 import java.util.Random;
 import java.util.Set;
 import java.util.Stack;
+import java.util.function.BiFunction;
 import java.util.stream.Collectors;
 import java.util.stream.IntStream;
 
@@ -25,7 +27,7 @@ public class MazeGenerator {
     private static final Random r = new Random (1L);
     
     private static final int parts = 2;
-    private static final int size = parts * 5;
+    private static final int size = parts * 15;
     
     public static void main (String ... args) {
         final var context = generateMaze (size, size, parts);
@@ -121,6 +123,9 @@ public class MazeGenerator {
         context = generateGatesBetweenSubparts (context);
         context = generateSpawnsAndExit (context);
         context = generateTumblers (context);
+        
+        context = generateExtraPassagesWithinSubpart (context);
+        context = generateFakeGatesWithinSubpart (context);
         
         return context;
     }
@@ -681,6 +686,179 @@ public class MazeGenerator {
         });
         
         return context;
+    }
+    
+    private static LevelGenerationContext generateExtraPassagesWithinSubpart (LevelGenerationContext context) {
+        final var square = context.getWidth () * context.getHeight () * 1.0;
+        final var order = new ArrayList <> (List.of (0, 1, 2, 3));
+        
+        for (int p = 0; p < context.getParts (); p++) {
+            final var subpart2cells = context.getPart2subpart2cells ().get (p);
+            
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                final var cells = subpart2cells.get (sp);
+                
+                var extraPassages = Math.round (Math.pow (cells.size () * 3 / 4, 2) / square);
+                System.out.println ("Extra passages for " + p + ", " + sp + ", size = " 
+                        + cells.size () + ": " +extraPassages); // SYSOUT
+                
+                passagesLoop:
+                while (extraPassages-- > 0) {
+                    final var cell = cells.get (r.nextInt (cells.size ()));
+                    Collections.shuffle (order, r);
+                    
+                    final var neis = cell.getMapNeighbors ();
+                    for (final var index : order) {
+                        final var nei = neis.get (index);
+                        if (nei.F == null || nei.F.getPart () != cell.getPart () 
+                                || nei.F.getSubpart () != cell.getSubpart ()) { 
+                            continue; 
+                        }
+                        
+                        final var passage = cell.getPassageNeighbor (nei.S.X, nei.S.Y);
+                        if (passage != null) {
+                            continue; // passage is already exists
+                        }
+                        
+                        final var pass = LevelPassage.of (cell, nei.F, null);
+                        nei.F.setPassageNeighbor (-nei.S.X, -nei.S.Y, pass);
+                        cell.setPassageNeighbor (nei.S.X, nei.S.Y, pass);
+                        
+                        continue passagesLoop;
+                    }
+                    
+                    // passage was not created due to appropriate neighbor is not found
+                    extraPassages += 1;
+                }
+            }
+        }
+        
+        return context;
+    }
+    
+    private static LevelGenerationContext generateFakeGatesWithinSubpart (LevelGenerationContext context) {
+        final var square = context.getWidth () * context.getHeight () * 1.0;
+        final var order = new ArrayList <> (List.of (0, 1, 2, 3));
+        
+        for (int p = 0; p < context.getParts (); p++) {
+            final var subpart2cells = context.getPart2subpart2cells ().get (p);
+            
+            for (int sp = 0; sp < subpart2cells.size (); sp++) {
+                final var cells = subpart2cells.get (sp);
+                
+                var fakeGates = Math.round (Math.pow (cells.size () * 2 / 3, 2.01) / square);
+                System.out.println ("Fake gates for " + p + ", " + sp + ", size = " 
+                        + cells.size () + ": " + fakeGates); // SYSOUT
+                
+                final var cellsOnMainPath = getCellsOnMainPath (context, p, sp).stream ()
+                    . map (c -> c.getPoint (0)).collect (Collectors.toSet ());
+                
+                gatesLoop:
+                while (fakeGates-- > 0) {
+                    final var cell = cells.get (r.nextInt (cells.size ()));
+                    Collections.shuffle (order, r);
+                    
+                    for (final var passage : cell.getPassageNeighbors ()) {
+                        if (passage.F == null || passage.F.getGateType () != null) {
+                            continue;
+                        }
+                        
+                        final var fromPoint = passage.F.getFrom ().getPoint (0);
+                        final var toPoint = passage.F.getTo ().getPoint (0);
+                        if (cellsOnMainPath.contains (fromPoint) && cellsOnMainPath.contains (toPoint)) {
+                            continue;
+                        }
+                        
+                        passage.F.setGateType (GateType.GATE);
+                        continue gatesLoop;
+                    }
+                    
+                    // passage was not created due to appropriate neighbor is not found
+                    fakeGates += 1;
+                }
+            }
+        }
+        
+        return context;
+    }
+    
+    private static final BiFunction <LevelPassage, Integer, LevelCell> cellFromSubpart = (passage, subpart) ->
+        passage.getFrom ().getSubpart () == subpart ? passage.getFrom () : passage.getTo ();
+    
+    private static List <LevelCell> getCellsOnMainPath (LevelGenerationContext context, int part, int subpart) {
+        final var subpartGates = context.getPart2gates ().get (part).stream ()
+            . filter (p -> p.getFrom ().getSubpart () == subpart || p.getTo ().getSubpart () == subpart)
+            . collect (Collectors.toList ());
+        if (subpartGates.isEmpty ()) {
+            throw new IllegalStateException ("Isolated subpart " + part + ", " + subpart);
+        }
+        
+        final var from = Optional.of (subpartGates.get (0))
+            . map (c -> cellFromSubpart.apply (c, subpart))
+            . get ();
+        
+        final var exit = context.getExit ();
+        final var exitInside = exit.getPart () == part && exit.getSubpart () == subpart;
+        
+        final var to = subpartGates.size () > 1 
+            ? Optional.of (subpartGates.get (1)).map (c -> cellFromSubpart.apply (c, subpart)).get ()
+            : context.getSpawns ().stream ().filter (c -> c.getPart () == part && c.getSubpart () == subpart)
+            . findFirst ().orElse (exitInside ? context.getExit () : null);
+            
+        if (to == null) {
+            return List.of ();
+        }
+        
+        return findPathBetween (from, to);
+    }
+    
+    private static List <LevelCell> findPathBetween (LevelCell a, LevelCell b) {
+        final var from = new HashMap <IPoint, LevelCell> ();
+        final var queue = new LinkedList <LevelCell> ();
+        
+        final var needPoint = b.getPoint (0);
+        from.put (a.getPoint (0), null);
+        queue.add (a);
+        
+        searchLoop:
+        while (!queue.isEmpty ()) {
+            final var cell = queue.poll ();
+            
+            for (final var passage : cell.getPassageNeighbors ()) {
+                if (passage.F == null || passage.F.getGateType () != null) { 
+                    continue; 
+                }
+                
+                final var nei = passage.F.getAnother (cell);
+                final var point = nei.getPoint (0);
+                if (from.containsKey (point)) {
+                    continue; // cell is already visited
+                }
+                
+                from.put (point, cell);
+                queue.add (nei);
+                
+                if (needPoint.equals (point)) {
+                    break searchLoop;
+                }
+            }
+        }
+        
+        if (from.get (needPoint) == null) {
+            throw new IllegalStateException ("Path is not found: " + a + " <x> " + b);
+        }
+        
+        final var path = new ArrayList <LevelCell> ();
+        var current = b; path.add (b);
+        
+        while (current != null) {
+            current = from.get (current.getPoint (0));
+            if (current != null) {                
+                path.add (current);
+            }
+        }
+        
+        return path;
     }
     
 }
