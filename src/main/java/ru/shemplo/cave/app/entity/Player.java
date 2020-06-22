@@ -10,7 +10,7 @@ import lombok.ToString;
 @Getter @Setter
 @AllArgsConstructor
 @EqualsAndHashCode (of = {"login", "idhh"})
-public class LobbyPlayer {
+public class Player {
     
     private String login;
     

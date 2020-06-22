@@ -4,10 +4,10 @@ import javafx.scene.control.ListCell;
 import javafx.scene.image.ImageView;
 import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
-import ru.shemplo.cave.app.entity.LobbyPlayer;
+import ru.shemplo.cave.app.entity.Player;
 import ru.shemplo.cave.app.resources.LevelTextures;
 
-public class LobbyListCell extends ListCell <LobbyPlayer> {
+public class LobbyListCell extends ListCell <Player> {
     
     private final ImageView imageIV = new ImageView ();
     
@@ -20,7 +20,7 @@ public class LobbyListCell extends ListCell <LobbyPlayer> {
     }
     
     @Override
-    protected void updateItem (LobbyPlayer item, boolean empty) {
+    protected void updateItem (Player item, boolean empty) {
         if (item == getItem ()) { return; }
         
         super.updateItem (item, empty);

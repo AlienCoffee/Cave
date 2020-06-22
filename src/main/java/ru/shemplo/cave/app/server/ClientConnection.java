@@ -50,6 +50,9 @@ public class ClientConnection implements Closeable {
     @Setter @Getter
     private String login;
     
+    @Setter @Getter
+    private ServerRoom room;
+    
     public ClientConnection (Integer id, SSLSocket socket) throws IOException {
         this.id = id == null ? -1 : id.intValue (); this.socket = socket; 
         
@@ -129,12 +132,12 @@ public class ClientConnection implements Closeable {
         return System.currentTimeMillis () - lastAliveTest;
     }
     
-    public boolean canBeRemoved (ConnectionsPool pool) {
+    public boolean canBeRemoved () {
         if (isAlive ()) { return false; }
         
-        if (!isClosed) {
+        if (!isClosed && room != null) {
             System.out.println ("Killing #" + id + " before remove"); // SYSOUT
-            pool.broadcastMessage (LEAVE_LOBBY.getValue (), getIdhh ());
+            room.broadcastMessage (LEAVE_LOBBY.getValue (), getIdhh ());
             
             try   { close (); }
             catch (IOException e) {}

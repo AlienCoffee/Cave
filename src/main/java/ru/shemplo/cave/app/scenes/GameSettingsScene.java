@@ -25,7 +25,7 @@ import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import ru.shemplo.cave.app.CaveApplication;
 import ru.shemplo.cave.app.LobbyListCell;
-import ru.shemplo.cave.app.entity.LobbyPlayer;
+import ru.shemplo.cave.app.entity.Player;
 import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.server.ServerState;
@@ -34,7 +34,7 @@ import ru.shemplo.cave.utils.EmptySelectionModel;
 
 public class GameSettingsScene extends AbstractScene {
 
-    private final ListView <LobbyPlayer> playersLV = new ListView <> ();
+    private final ListView <Player> playersLV = new ListView <> ();
     
     private final TextField expeditionTimeTF = new TextField ();
     private final TextField expeditorsTF = new TextField ();
@@ -79,7 +79,7 @@ public class GameSettingsScene extends AbstractScene {
                         final var playerParts = str.split (",");
                         
                         final var ready = Boolean.parseBoolean (playerParts [2]);
-                        return new LobbyPlayer (playerParts [0], playerParts [1], ready);
+                        return new Player (playerParts [0], playerParts [1], ready);
                     })
                     . collect (Collectors.toList ());
                 playersLV.getItems ().setAll (players);
@@ -89,7 +89,7 @@ public class GameSettingsScene extends AbstractScene {
                 messageL.setText (parts [2] + " joined");
                 
                 final var ready = Boolean.parseBoolean (parts [4]);
-                final var player = new LobbyPlayer (parts [2], parts [3], ready);
+                final var player = new Player (parts [2], parts [3], ready);
                 playersLV.getItems ().add (player);
             });
         } else if (LEAVE_LOBBY.getValue ().equals (parts [1])) {
@@ -196,7 +196,7 @@ public class GameSettingsScene extends AbstractScene {
         playersLV.setFocusTraversable (false);
         playersLV.setFocusModel (new FocusModel <> () {
             @Override
-            protected LobbyPlayer getModelItem (int index) {
+            protected Player getModelItem (int index) {
                 return null;
             }
             

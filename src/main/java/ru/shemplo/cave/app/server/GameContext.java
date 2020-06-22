@@ -113,7 +113,7 @@ public class GameContext {
         }
         
         if (!internal) {            
-            pool.getConnections ().forEach (c -> {            
+            pool.getPendingConnections ().forEach (c -> {            
                 applyMove (c, 0, 0, true);
             });
         }
@@ -134,7 +134,7 @@ public class GameContext {
             level.toggleTumbler (px, py);
         }
         
-        pool.getConnections ().forEach (c -> {            
+        pool.getPendingConnections ().forEach (c -> {            
             applyMove (c, 0, 0, true);
         });
     }
