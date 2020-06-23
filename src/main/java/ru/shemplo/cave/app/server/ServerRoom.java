@@ -14,9 +14,10 @@ import java.util.stream.Collectors;
 
 import lombok.Getter;
 import lombok.Setter;
+import lombok.ToString;
 import ru.shemplo.cave.app.entity.Player;
-import ru.shemplo.cave.utils.Utils;
 
+@ToString (of = {"id", "idh", "newConnectionsAllowed"})
 public class ServerRoom implements Closeable {
     
     @Getter
@@ -30,12 +31,15 @@ public class ServerRoom implements Closeable {
     private final Thread controller;
     
     @Getter
-    private boolean newConnectionsAllowed;
+    private boolean newConnectionsAllowed = true;
     
     public ServerRoom (int id, ConnectionsPool pool) {
         this.id = id; this.pool = pool;
         
-        idh = Utils.digest (String.format ("room-%d", id), CaveServer.SERVER_SALT);
+        final var random = pool.getRandom ();
+        //idh = Utils.digest (String.format ("room-%d", id), CaveServer.SERVER_SALT);
+        final var letter = String.valueOf ((char) ('a' + random.nextInt ('z' - 'a')));
+        idh = String.format ("%s%d", letter, id);
         
         controller = new Thread (() -> {
             while (!Thread.currentThread ().isInterrupted ()) {
@@ -68,7 +72,7 @@ public class ServerRoom implements Closeable {
                             counter.set (5);
                             
                             final var generatorThread = new Thread (() -> {
-                                context = new GameContext (pool, players);
+                                context = new GameContext (players);
                                 System.out.println ("Context is generated"); // SYSOUT
                             });
                             generatorThread.setDaemon (true);
@@ -92,9 +96,7 @@ public class ServerRoom implements Closeable {
                     }
                     
                     if (alive < players.size ()) {
-                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
-                        counter.set (5);
-                        state = FINISH;
+                        setFinishState ("One of expeditors is lost");
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -112,9 +114,7 @@ public class ServerRoom implements Closeable {
                     }
                     
                     if (alive < players.size ()) {
-                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
-                        counter.set (5);
-                        state = FINISH;
+                        setFinishState ("One of expeditors is lost");
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -124,17 +124,14 @@ public class ServerRoom implements Closeable {
                 } else if (state == ServerState.GAME) {
                     broadcastMessage (COUNTDOWN.getValue (), String.valueOf (counter.get ()));
                     if (counter.decrementAndGet () <= 0) {
-                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "Expedition time is over");
-                        broadcastMessage (START_COUNTDOWN.getValue ());
+                        setFinishState ("Expedition time is over");
                         System.out.println ("Game time is over"); // SYSOUT
-                        state = ServerState.FINISH;
-                        counter.set (5);
+                        
+                        broadcastMessage (START_COUNTDOWN.getValue ());
                     }
                     
                     if (alive < players.size ()) {
-                        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "One of expeditors is lost");
-                        counter.set (5);
-                        state = FINISH;
+                        setFinishState ("One of expeditors is lost");
                     }
                     
                     try { Thread.sleep (1000); } catch (InterruptedException ie) { 
@@ -142,16 +139,9 @@ public class ServerRoom implements Closeable {
                         return; 
                     }
                 } else if (state == ServerState.FINISH) {
-                    broadcastMessage (COUNTDOWN.getValue (), String.valueOf (counter.get ()));
-                    if (counter.decrementAndGet () <= 0) {
-                        synchronized (connections) {
-                            for (final var connection : connections) {
-                                connection.setAlive (false);
-                            }
-                        }
-                        
+                    if (counter.get () >= players.size ()) {
                         broadcastMessage (SERVER_STATE.getValue (), RECRUITING.name ());
-                        System.out.println ("Server is waiting for players"); // SYSOUT
+                        System.out.println ("Room #" + id + " is waiting for players"); // SYSOUT
                         state = ServerState.RECRUITING;
                         
                         expeditionTime = 10;
@@ -172,11 +162,17 @@ public class ServerRoom implements Closeable {
     private final List <ClientConnection> connections = new ArrayList <> ();
     private final Set <Integer> readyPlayers = new HashSet <> ();
     
+    public List <ClientConnection> getConnections () {
+        synchronized (connections) {            
+            return List.copyOf (connections);
+        }
+    }
+    
     @Getter
     private ServerState state = ServerState.RECRUITING;
     
     private final AtomicInteger counter = new AtomicInteger ();
-    private List <ClientConnection > players;
+    private List <ClientConnection> players;
     @Getter private GameContext context;
     private volatile int alive = 0;
     
@@ -186,9 +182,10 @@ public class ServerRoom implements Closeable {
     @Setter @Getter
     private int expeditionSize = 2;
     
-    public void open () {
+    public ServerRoom open () {
         System.out.println ("Room #" + id + " is openned"); // SYSOUT
         controller.start ();
+        return this;
     }
     
     public void checkConnections () {
@@ -208,6 +205,10 @@ public class ServerRoom implements Closeable {
                 if (canRemove) {
                     synchronized (readyPlayers) {
                         readyPlayers.remove (cc.getId ());
+                        if (state == FINISH) {
+                            counter.decrementAndGet ();
+                            players.remove (cc);
+                        }
                     }
                 }
                 
@@ -223,9 +224,11 @@ public class ServerRoom implements Closeable {
             }
             
             this.alive = alive;
-            if (alive == 0) {
+            if (alive == 0 && timeSinceEmpty == -1) {
+                System.out.println ("Room #" + id + " is empty"); // SYSOUT
                 timeSinceEmpty = System.currentTimeMillis ();
-            } else if (timeSinceEmpty != -1) {
+            } else if (alive > 0 && timeSinceEmpty != -1) {
+                System.out.println ("Room #" + id + " is not empty"); // SYSOUT
                 timeSinceEmpty = -1;
             }
         }
@@ -241,7 +244,16 @@ public class ServerRoom implements Closeable {
     private volatile long timeSinceEmpty = -1;
     
     public boolean addConnection (ClientConnection client) {
-        return false;
+        if (!newConnectionsAllowed) {
+            return false;
+        }
+        
+        synchronized (connections) {
+            connections.add (client);
+            client.setRoom (this);
+        }
+        
+        return true;
     }
     
     public void deltaCounter (int d) {
@@ -271,6 +283,10 @@ public class ServerRoom implements Closeable {
     }
     
     public void onPlayerReadyStateChanged (ClientConnection connection, boolean ready) {
+        if (state != RECRUITING && state != WAITIN_FOR_PLAYERS) { 
+            return; /* illegal state for this action */ 
+        }
+        
         synchronized (readyPlayers) {
             if (ready) {
                 readyPlayers.add (connection.getId ());
@@ -282,10 +298,17 @@ public class ServerRoom implements Closeable {
     
     public void onExitFound () {
         if (state != GAME) { return; /* illegal state for this action */ }
-        
-        broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), "Exit from the cave is found");
-        counter.set (5);
-        state = FINISH;
+        setFinishState ("Exit from the cave is found");
+    }
+    
+    private void setFinishState (String reason) {
+        synchronized (readyPlayers) {
+            readyPlayers.clear ();
+            
+            broadcastMessage (SERVER_STATE.getValue (), FINISH.name (), reason);
+            context = null; state = FINISH;            
+            counter.set (0);
+        }
     }
 
     @Override

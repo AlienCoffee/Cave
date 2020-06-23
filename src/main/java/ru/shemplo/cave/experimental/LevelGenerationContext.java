@@ -1,6 +1,7 @@
 package ru.shemplo.cave.experimental;
 
 import java.util.List;
+import java.util.Map;
 
 import lombok.AllArgsConstructor;
 import lombok.Builder;
@@ -9,6 +10,7 @@ import lombok.RequiredArgsConstructor;
 import lombok.Setter;
 import ru.shemplo.cave.app.entity.level.LevelCell;
 import ru.shemplo.cave.app.entity.level.LevelPassage;
+import ru.shemplo.cave.app.entity.level.LevelTumbler;
 import ru.shemplo.cave.utils.IPoint;
 
 @Builder
@@ -46,5 +48,7 @@ public class LevelGenerationContext {
     private LevelCell exit;
     
     private LevelGenerationGraph graph;
+    
+    private Map <Integer, List <LevelTumbler>> part2tumblers;
     
 }

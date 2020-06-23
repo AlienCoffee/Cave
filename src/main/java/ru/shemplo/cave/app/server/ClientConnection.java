@@ -17,10 +17,12 @@ import java.util.function.BiConsumer;
 import javax.net.ssl.HandshakeCompletedEvent;
 import javax.net.ssl.SSLSocket;
 
+import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
 import ru.shemplo.cave.utils.Utils;
 
+@EqualsAndHashCode (of = {"id", "idh"})
 public class ClientConnection implements Closeable {
     
     private final SSLSocket socket;
@@ -54,7 +56,7 @@ public class ClientConnection implements Closeable {
     private ServerRoom room;
     
     public ClientConnection (Integer id, SSLSocket socket) throws IOException {
-        this.id = id == null ? -1 : id.intValue (); this.socket = socket; 
+        this.id = (id == null) ? -1 : id.intValue (); this.socket = socket; 
         
         os = socket.getOutputStream ();
         w = new OutputStreamWriter (os, StandardCharsets.UTF_8);
@@ -71,6 +73,11 @@ public class ClientConnection implements Closeable {
                     if (parts == null) { throw new IOException (); }
                     lastAliveTest = System.currentTimeMillis ();
                     
+                    /*
+                    if (parts.length > 1 && !PING.getValue ().equals (parts [1])) {
+                        System.out.println ("Input: " + Arrays.toString (parts)); // SYSOUT
+                    }
+                    */
                     if (idh == null || (parts.length > 0 && idh.equals (parts [0]))) {
                         Optional.ofNullable (onReadMessage).ifPresent (h -> h.accept (parts, this));
                     }

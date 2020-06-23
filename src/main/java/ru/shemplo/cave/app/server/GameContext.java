@@ -11,8 +11,6 @@ import ru.shemplo.cave.app.entity.level.Level;
 
 public class GameContext {
     
-    private final ConnectionsPool pool;
-    
     private final Level level;
     
     private final Map <Integer, Boolean> id2supermode = new HashMap <> ();
@@ -21,9 +19,8 @@ public class GameContext {
     
     private final List <ClientConnection> players;
     
-    public GameContext (ConnectionsPool pool, List <ClientConnection> connections) {
+    public GameContext (List <ClientConnection> connections) {
         players = connections;
-        this.pool = pool;
         
         final var ps = connections.size ();
         
@@ -113,7 +110,7 @@ public class GameContext {
         }
         
         if (!internal) {            
-            pool.getPendingConnections ().forEach (c -> {            
+            connection.getRoom ().getConnections ().forEach (c -> {            
                 applyMove (c, 0, 0, true);
             });
         }
@@ -134,7 +131,7 @@ public class GameContext {
             level.toggleTumbler (px, py);
         }
         
-        pool.getPendingConnections ().forEach (c -> {            
+        connection.getRoom ().getConnections ().forEach (c -> {
             applyMove (c, 0, 0, true);
         });
     }

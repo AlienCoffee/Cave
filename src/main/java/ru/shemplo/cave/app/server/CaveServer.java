@@ -13,6 +13,7 @@ import javax.net.ssl.SSLSocket;
 public class CaveServer implements Closeable {
     
     public static final String SERVER_SALT = String.valueOf (new Random ().nextInt ());
+    public static final int SERVER_ID_STEP = 1 + new Random ().nextInt (3);
     
     public static void main (String ... args) throws IOException, InterruptedException {
         System.setProperty ("javax.net.ssl.keyStore", "server.jks");

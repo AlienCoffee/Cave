@@ -38,6 +38,7 @@ public class GameSettingsScene extends AbstractScene {
     
     private final TextField expeditionTimeTF = new TextField ();
     private final TextField expeditorsTF = new TextField ();
+    private final TextField roomTF = new TextField ();
     
     private final Label messageL = new Label ();
     
@@ -90,7 +91,14 @@ public class GameSettingsScene extends AbstractScene {
                 
                 final var ready = Boolean.parseBoolean (parts [4]);
                 final var player = new Player (parts [2], parts [3], ready);
-                playersLV.getItems ().add (player);
+                
+                playersLV.getItems ().stream ().filter (p -> {
+                    return p.getIdhh ().equals (parts [3]);
+                }).findFirst ().ifPresentOrElse (__ -> {
+                    // player is already in list
+                }, () -> {
+                    playersLV.getItems ().add (player);
+                });
             });
         } else if (LEAVE_LOBBY.getValue ().equals (parts [1])) {
             synchronized (playersLV) {
@@ -109,12 +117,14 @@ public class GameSettingsScene extends AbstractScene {
                 });
             }
         } else if (START_COUNTDOWN.getValue ().equals (parts [1])) {
+            /*
             Platform.runLater (() -> {
                 expeditionTimeTF.setDisable (true);
                 expeditorsTF.setDisable (true);
                 readyB.setDisable (true);
                 backB.setDisable (true);
             });
+            */
         } else if (COUNTDOWN.getValue ().equals (parts [1])) {
             if (Integer.parseInt (parts [2]) > 0) {                
                 Platform.runLater (() -> {
@@ -165,15 +175,27 @@ public class GameSettingsScene extends AbstractScene {
                 expeditorsTF.setText (parts [2]);
                 externalUpdate = false;
             });
-        }  else if (EXPEDITION_TIME.getValue ().equals (parts [1])) {
+        } else if (EXPEDITION_TIME.getValue ().equals (parts [1])) {
             Platform.runLater (() -> {
                 externalUpdate = true;
                 expeditionTimeTF.setText (parts [2]);
                 externalUpdate = false;
             });
+        } else if (ROOM_ID.getValue ().equals (parts [1])) {
+            Platform.runLater (() -> {
+                roomTF.setText (parts [2]);
+            });
         } else if (SERVER_STATE.getValue ().equals (parts [1])) {
             System.out.println ("Server state: " + parts [2]); // SYSOUT
             final var serverState = ServerState.valueOf (parts [2]);
+            
+            final var isRecruiting = serverState == ServerState.RECRUITING;
+            Platform.runLater (() -> {   
+                expeditionTimeTF.setDisable (!isRecruiting);
+                expeditorsTF.setDisable (!isRecruiting);
+                readyB.setDisable (!isRecruiting);
+                backB.setDisable (!isRecruiting);
+            });
             
             if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
                 ApplicationScene.GAME.show (app);
@@ -213,6 +235,18 @@ public class GameSettingsScene extends AbstractScene {
         menuBox.setPadding (new Insets (0, 16, 0, 16));
         menuBox.setAlignment (Pos.CENTER);
         root.setRight (menuBox);
+        
+        final var roomBox = new HBox (8);
+        menuBox.getChildren ().add (roomBox);
+        roomBox.setAlignment (Pos.CENTER);
+        
+        final var roomL = new Label ("Room:");
+        roomBox.getChildren ().add (roomL);
+        roomL.setTextFill (Color.WHITESMOKE);
+        
+        roomBox.getChildren ().add (roomTF);
+        roomTF.setPrefWidth (155);
+        roomTF.setDisable (true);
         
         final var expeditorsBox = new HBox (8);
         menuBox.getChildren ().add (expeditorsBox);

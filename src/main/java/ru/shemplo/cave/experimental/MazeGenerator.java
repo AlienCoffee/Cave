@@ -27,7 +27,7 @@ public class MazeGenerator {
     private static final Random r = new Random (1L);
     
     private static final int parts = 2;
-    private static final int size = parts * 15;
+    private static final int size = parts * 5;
     
     public static void main (String ... args) {
         final var context = generateMaze (size, size, parts);
@@ -685,6 +685,11 @@ public class MazeGenerator {
             System.out.println (); // SYSOUT
         });
         
+        final var part2tumblers = tumblers.stream ().collect (Collectors.groupingBy (
+            t -> t.getCell ().getPart ()
+        ));
+        
+        context.setPart2tumblers (part2tumblers);
         return context;
     }
     
@@ -793,26 +798,50 @@ public class MazeGenerator {
             throw new IllegalStateException ("Isolated subpart " + part + ", " + subpart);
         }
         
-        final var from = Optional.of (subpartGates.get (0))
+        final var gate = Optional.of (subpartGates.get (0))
             . map (c -> cellFromSubpart.apply (c, subpart))
             . get ();
         
         final var exit = context.getExit ();
         final var exitInside = exit.getPart () == part && exit.getSubpart () == subpart;
         
-        final var to = subpartGates.size () > 1 
+        final var from = subpartGates.size () > 1 
             ? Optional.of (subpartGates.get (1)).map (c -> cellFromSubpart.apply (c, subpart)).get ()
             : context.getSpawns ().stream ().filter (c -> c.getPart () == part && c.getSubpart () == subpart)
             . findFirst ().orElse (exitInside ? context.getExit () : null);
             
-        if (to == null) {
+        if (from == null) {
+            // It means that it's the final subsection
+            return new ArrayList <> ();
+        }
+        
+        final var tumbler = context.getPart2tumblers ().getOrDefault (part, List.of ()).stream ()
+            . filter (t -> t.getCell ().getSubpart () == subpart).findFirst ()
+            . map (LevelTumbler::getCell).orElse (null);
+                
+        final var path = new HashSet <IPoint> ();
+        
+        if (tumbler != null) {
+            path.addAll (findPathBetween (from, tumbler));
+            path.addAll (findPathBetween (tumbler, gate));
+        } else {
+            path.addAll (findPathBetween (from, gate));
+        }
+        
+        return path.stream ().map (point -> context.getMap () [point.Y][point.X])
+             . collect (Collectors.toList ());
+    }
+    
+    private static List <IPoint> findPathBetween (LevelCell a, LevelCell b) {
+        if (a == null || b == null) {
+            System.out.println ("Path beween null cells: " + a + " | " + b); // SYSOUT
             return List.of ();
         }
         
-        return findPathBetween (from, to);
-    }
-    
-    private static List <LevelCell> findPathBetween (LevelCell a, LevelCell b) {
+        if (a == b) {
+            return List.of (a.getPoint (0));
+        }
+        
         final var from = new HashMap <IPoint, LevelCell> ();
         final var queue = new LinkedList <LevelCell> ();
         
@@ -848,13 +877,13 @@ public class MazeGenerator {
             throw new IllegalStateException ("Path is not found: " + a + " <x> " + b);
         }
         
-        final var path = new ArrayList <LevelCell> ();
-        var current = b; path.add (b);
+        final var path = new ArrayList <IPoint> ();
+        var current = b; path.add (b.getPoint (0));
         
         while (current != null) {
             current = from.get (current.getPoint (0));
             if (current != null) {                
-                path.add (current);
+                path.add (current.getPoint (0));
             }
         }
         

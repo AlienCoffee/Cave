@@ -66,7 +66,7 @@ public class GameScene extends AbstractScene {
             serverState = ServerState.valueOf (parts [2]);
             
             if (serverState == ServerState.FINISH) {
-                app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
+                //app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
                 Platform.runLater (() -> { backB.setDisable (false); });
                 finishReason = parts [3];
             }
@@ -153,11 +153,13 @@ public class GameScene extends AbstractScene {
         menuBox.getChildren ().add (backB);
         backB.setFocusTraversable (false);
         backB.setOnAction (ae -> {
-            if (serverState != ServerState.FINISH) {
+            if (serverState == ServerState.FINISH) {
+                app.getConnection ().sendMessage (PLAYER_FINISHED_GAME.getValue ());
+                ApplicationScene.GAME_SETTINGS.show (app);
+            } else {                
                 app.getConnection ().sendMessage (LEAVE_LOBBY.getValue ());
+                ApplicationScene.MAIN_MENU.show (app);
             }
-            
-            ApplicationScene.MAIN_MENU.show (app);
         });
         
         final var canvasBox = new VBox ();
@@ -219,7 +221,9 @@ public class GameScene extends AbstractScene {
                         connection.sendMessage (PLAYER_MOVE.getValue (), "1", "0");
                     } break;
                     case ENTER: {
-                        connection.sendMessage (PLAYER_ACTION.getValue (), "tumbler");
+                        if (!chatTF.isFocused ()) { // Do action if it's not sending message event                            
+                            connection.sendMessage (PLAYER_ACTION.getValue (), "tumbler");
+                        }
                     } break;
                     case M: {
                         connection.sendMessage (PLAYER_MODE.getValue ());
@@ -268,7 +272,7 @@ public class GameScene extends AbstractScene {
         
         if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
             ctx.setFill (Color.YELLOW);
-            ctx.fillText ("Waiting for players: " + countdown, 20, 40);
+            ctx.fillText ("Waiting for players: " + (countdown == -1 ? "..." : countdown), 20, 40);
             
             ctx.setFill (Color.WHEAT);
             ctx.fillText ("Control: W, A, S, D", 20, 70);

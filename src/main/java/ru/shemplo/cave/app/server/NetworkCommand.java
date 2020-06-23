@@ -12,12 +12,14 @@ public enum NetworkCommand {
     CONNECTION_CLOSED ("connection closed"),
     CONNECTION_ACCEPTED ("connection accepted"),
     
+    JOIN_ROOM ("join room"),
     LOBBY_PLAYER ("lobby player"),
     IN_LOBBY ("lobby players"),
     GET_LOBBY_PLAYERS ("get lobby players"),
     LOBBY_PLAYERS ("lobby players"),
     EXPEDITION_SIZE ("expedition size"),
     EXPEDITION_TIME ("expedition time"),
+    ROOM_ID ("room id"),
     LEAVE_LOBBY ("leave lobby"),
     CHAT_MESSAGE ("chat message"),
     
@@ -34,7 +36,8 @@ public enum NetworkCommand {
     PLAYER_MODE ("player mode"),
     PLAYER_LOCATION ("player location"),
     PLAYERS_LOCATION ("players location"),
-    PLAYER_FOUND_EXIT ("player found exit")
+    PLAYER_FOUND_EXIT ("player found exit"),
+    PLAYER_FINISHED_GAME ("player finished game"),
     
     ;
     

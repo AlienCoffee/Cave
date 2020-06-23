@@ -24,6 +24,7 @@ public class GameJoinScene extends AbstractScene {
 
     private final TextField loginTF = new TextField ();
     private final TextField hostTF = new TextField ();
+    private final TextField roomTF = new TextField ();
     private final Label messageL = new Label ();
     
     private final Button connectB = new Button ("Connect");
@@ -50,6 +51,10 @@ public class GameJoinScene extends AbstractScene {
         hostTF.setMaxWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (hostTF);
         hostTF.setPromptText ("Host");
+        
+        roomTF.setMaxWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
+        menuBox.getChildren ().add (roomTF);
+        roomTF.setPromptText ("Room (leave empty to create new)");
         
         connectB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (connectB);
@@ -93,6 +98,15 @@ public class GameJoinScene extends AbstractScene {
                             connection.setIdh (parts [0]);
                             
                             app.setConnection (connection);
+                            
+                            final var roomId = roomTF.getText ().trim ();
+                            final var login = connection.getLogin ();
+                            
+                            if (roomId.isEmpty ()) {
+                                connection.sendMessage (JOIN_ROOM.getValue (), login);
+                            } else {
+                                connection.sendMessage (JOIN_ROOM.getValue (), login, roomId);                        
+                            }
                         } else if (CONNECTION_ACCEPTED.getValue ().equals (parts [1])) {
                             ApplicationScene.GAME_SETTINGS.show (app);
                         } else if (CONNECTION_REJECTED.getValue ().equals (parts [1])) {
@@ -100,7 +114,7 @@ public class GameJoinScene extends AbstractScene {
                                 messageL.setText (String.valueOf (parts [2]));
                             });
                         }
-                    });                    
+                    });  
                 });
                 
                 connection.startHandshake ();
