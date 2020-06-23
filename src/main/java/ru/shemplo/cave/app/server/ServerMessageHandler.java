@@ -17,7 +17,19 @@ public class ServerMessageHandler {
         if (room == null && JOIN_ROOM.getValue ().equals (parts [1])) {
             final var login = parts [2];
             if (login.contains (",") || login.contains ("/")) {
-                connection.sendMessage (CONNECTION_REJECTED.getValue (), "Bad name: special characters , and /");
+                connection.sendMessage (CONNECTION_REJECTED.getValue (), "Bad name: special characters , or /");
+                connection.setAlive (false);
+                return;
+            }
+            
+            if (login.length () > 24) {
+                connection.sendMessage (CONNECTION_REJECTED.getValue (), "Bad name: too long (24 limit)");
+                connection.setAlive (false);
+                return;
+            }
+            
+            if (login.equals ("$")) {
+                connection.sendMessage (CONNECTION_REJECTED.getValue (), "Bad name: reserved by server");
                 connection.setAlive (false);
                 return;
             }
@@ -43,6 +55,7 @@ public class ServerMessageHandler {
             connection.sendMessage (SERVER_STATE.getValue (), room.getState ().name ());
             connection.sendMessage (ROOM_ID.getValue (), room.getIdh ());
             
+            room.broadcastMessage (CHAT_MESSAGE.getValue (), "$", connection.getLogin () + " joined the room");
             room.broadcastMessage (LOBBY_PLAYER.getValue (), parts [2], connection.getIdhh (), "false");
             handle (new String [] {"", GET_LOBBY_PLAYERS.getValue ()}, connection);
         } else if (GET_LOBBY_PLAYERS.getValue ().equals (parts [1])) {
@@ -51,6 +64,7 @@ public class ServerMessageHandler {
                 . collect (Collectors.joining ("/"));
             connection.sendMessage (LOBBY_PLAYERS.getValue (), logins);
         } else if (LEAVE_LOBBY.getValue ().equals (parts [1])) {
+            room.broadcastMessage (CHAT_MESSAGE.getValue (), "$", connection.getLogin () + " leaved the room");
             room.broadcastMessage (LEAVE_LOBBY.getValue (), connection.getIdhh ());
             connection.setAlive (false);            
         } else if (PLAYER_READY.getValue ().equals (parts [1])) {

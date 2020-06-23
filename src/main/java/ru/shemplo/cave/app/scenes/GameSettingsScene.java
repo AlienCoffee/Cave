@@ -13,10 +13,10 @@ import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.geometry.Pos;
 import javafx.scene.control.Button;
-import javafx.scene.control.FocusModel;
 import javafx.scene.control.Label;
 import javafx.scene.control.ListView;
 import javafx.scene.control.TextField;
+import javafx.scene.input.KeyCode;
 import javafx.scene.layout.Background;
 import javafx.scene.layout.BackgroundFill;
 import javafx.scene.layout.BorderPane;
@@ -24,20 +24,25 @@ import javafx.scene.layout.HBox;
 import javafx.scene.layout.VBox;
 import javafx.scene.paint.Color;
 import ru.shemplo.cave.app.CaveApplication;
+import ru.shemplo.cave.app.ChatListCell;
 import ru.shemplo.cave.app.LobbyListCell;
+import ru.shemplo.cave.app.entity.ChatMessage;
 import ru.shemplo.cave.app.entity.Player;
 import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.server.ServerState;
 import ru.shemplo.cave.app.styles.SizeStyles;
+import ru.shemplo.cave.utils.EmptyFocusModel;
 import ru.shemplo.cave.utils.EmptySelectionModel;
 
 public class GameSettingsScene extends AbstractScene {
 
+    private final ListView <ChatMessage> chatLV = new ListView <> ();
     private final ListView <Player> playersLV = new ListView <> ();
     
     private final TextField expeditionTimeTF = new TextField ();
     private final TextField expeditorsTF = new TextField ();
+    private final TextField chatTF = new TextField ();
     private final TextField roomTF = new TextField ();
     
     private final Label messageL = new Label ();
@@ -106,7 +111,6 @@ public class GameSettingsScene extends AbstractScene {
                     playersLV.getItems ().removeIf (p -> {
                         final var found = p.getIdhh ().equals (parts [2]);
                         if (found) {
-                            System.out.println ("Leaver found: " + p.getLogin ()); // SYSOUT
                             Platform.runLater (() -> {
                                 messageL.setText (p.getLogin () + " leaved");
                             });
@@ -117,14 +121,7 @@ public class GameSettingsScene extends AbstractScene {
                 });
             }
         } else if (START_COUNTDOWN.getValue ().equals (parts [1])) {
-            /*
-            Platform.runLater (() -> {
-                expeditionTimeTF.setDisable (true);
-                expeditorsTF.setDisable (true);
-                readyB.setDisable (true);
-                backB.setDisable (true);
-            });
-            */
+            
         } else if (COUNTDOWN.getValue ().equals (parts [1])) {
             if (Integer.parseInt (parts [2]) > 0) {                
                 Platform.runLater (() -> {
@@ -200,6 +197,12 @@ public class GameSettingsScene extends AbstractScene {
             if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
                 ApplicationScene.GAME.show (app);
             }
+        } else if (CHAT_MESSAGE.getValue ().equals (parts [1])) {
+            Platform.runLater (() -> {
+                final var time = System.currentTimeMillis ();
+                
+                chatLV.getItems ().add (new ChatMessage (parts [2], parts [3], time));
+            });
         }
     }
 
@@ -207,27 +210,47 @@ public class GameSettingsScene extends AbstractScene {
     protected void initView () {
         getChildren ().add (0, backgroundC);
         
-        final var leftBox = new VBox ();
-        BorderPane.setMargin (leftBox, new Insets (0, 0, 0, 64));
-        leftBox.setAlignment (Pos.CENTER_RIGHT);
-        root.setLeft (leftBox);
+        final var playersBox = new VBox (8);
+        //playersBox.setBackground (new Background (new BackgroundFill (Color.color (0.85, 0.85, 0.85, 0.125), null, null)));
+        BorderPane.setMargin (playersBox, new Insets (0, 0, 0, 64));
+        playersBox.setPadding (new Insets (0, 16, 0, 16));
+        playersBox.setAlignment (Pos.CENTER_LEFT);
+        root.setLeft (playersBox);
+        
+        final var playersL = new Label ("Players in lobby:");
+        playersBox.getChildren ().add (playersL);
+        playersL.setTextFill (Color.WHITESMOKE);
         
         playersLV.setSelectionModel (new EmptySelectionModel <> ());
         playersLV.setCellFactory (__ -> new LobbyListCell ());
+        playersLV.setFocusModel (new EmptyFocusModel <> ());
         playersLV.setBackground (Background.EMPTY);
         playersLV.setFocusTraversable (false);
-        playersLV.setFocusModel (new FocusModel <> () {
-            @Override
-            protected Player getModelItem (int index) {
-                return null;
-            }
-            
-            @Override
-            protected int getItemCount () {
-                return 0;
+        playersBox.getChildren ().add (playersLV);
+        
+        final var chatBox = new VBox ();
+        //chatBox.setPadding (new Insets (0, 16, 0, 16));
+        chatBox.setAlignment (Pos.BOTTOM_CENTER);
+        root.setCenter (chatBox);
+        
+        chatLV.setBackground (new Background (new BackgroundFill (Color.color (0.35, 0.35, 0.35, 0.75), null, null)));
+        chatLV.setSelectionModel (new EmptySelectionModel <> ());
+        chatLV.setCellFactory (__ -> new ChatListCell ());
+        chatLV.setFocusModel (new EmptyFocusModel <> ());
+        chatBox.getChildren ().add (chatLV);
+        chatLV.setFocusTraversable (false);
+        
+        chatTF.setPromptText ("Type message here");
+        chatBox.getChildren ().add (chatTF);
+        chatTF.setOnKeyReleased (ke -> {
+            final var text = chatTF.getText ();
+            if (ke.getCode () == KeyCode.ENTER) {
+                if (!text.isBlank ()) {                    
+                    app.getConnection ().sendMessage (CHAT_MESSAGE.getValue (), text);
+                    chatTF.setText ("");
+                }
             }
         });
-        leftBox.getChildren ().add (playersLV);
         
         final var menuBox = new VBox (32);
         menuBox.setBackground (new Background (new BackgroundFill (Color.color (0.75, 0.75, 0.75, 0.25), null, null)));

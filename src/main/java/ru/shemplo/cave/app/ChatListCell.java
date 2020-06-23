@@ -1,28 +1,22 @@
 package ru.shemplo.cave.app;
 
 import javafx.scene.control.ListCell;
-import javafx.scene.image.ImageView;
 import javafx.scene.layout.Background;
 import javafx.scene.paint.Color;
-import ru.shemplo.cave.app.entity.Player;
-import ru.shemplo.cave.app.resources.LevelTextures;
+import ru.shemplo.cave.app.entity.ChatMessage;
 import ru.shemplo.cave.app.styles.FontStyles;
 
-public class LobbyListCell extends ListCell <Player> {
+public class ChatListCell extends ListCell <ChatMessage> {
     
-    private final ImageView imageIV = new ImageView ();
-    
-    public LobbyListCell () {
+    public ChatListCell () {
         setFont (FontStyles.NORMAL_16_FONT);
         setBackground (Background.EMPTY);
         setTextFill (Color.WHITESMOKE);
-        imageIV.setFitHeight (20);
-        imageIV.setFitWidth (20);
         setGraphicTextGap (8);
     }
     
     @Override
-    protected void updateItem (Player item, boolean empty) {
+    protected void updateItem (ChatMessage item, boolean empty) {
         if (item == getItem ()) { return; }
         
         super.updateItem (item, empty);
@@ -34,10 +28,7 @@ public class LobbyListCell extends ListCell <Player> {
             return;
         }
         
-        super.setText (item.getLogin ());
-        
-        imageIV.setImage (item.isReady () ? LevelTextures.tickIcon : LevelTextures.crossIcon);
-        super.setGraphic (imageIV);
+        super.setText (String.format ("< %s > %s", item.getAuthor (), item.getText ()));
     }
     
 }
