@@ -15,6 +15,7 @@ import javax.net.ssl.SSLSocket;
 
 import lombok.Getter;
 import lombok.RequiredArgsConstructor;
+import ru.shemplo.cave.app.server.room.ServerRoom;
 import ru.shemplo.cave.utils.Utils;
 
 @RequiredArgsConstructor
@@ -73,10 +74,10 @@ public class ConnectionsPool implements Closeable {
                 for (final var room : id2room.values ()) {
                     room.checkConnections ();
                     
-                    if (room.getRoomPlayersNumber () == 0) {
+                    if (room.isEmpty ()) {
                         synchronized (room) {                            
                             final var empty = System.currentTimeMillis () - room.getTimeSinceEmpty ();
-                            if (room.getRoomPlayersNumber () == 0 && empty > emptyRoomTimeout) {
+                            if (room.isEmpty () && empty > emptyRoomTimeout) {
                                 System.out.println ("Closing empty room #" + room.getId ()); // SYSOUT
                                 
                                 try   { room.close (); } 

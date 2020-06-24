@@ -7,6 +7,7 @@ import java.util.List;
 import java.util.Map;
 import java.util.StringJoiner;
 
+import lombok.Getter;
 import ru.shemplo.cave.app.entity.level.Level;
 
 public class GameContext {
@@ -18,6 +19,9 @@ public class GameContext {
     private final Map <Integer, Integer> id2py = new HashMap <> ();
     
     private final List <ClientConnection> players;
+    
+    @Getter
+    private boolean exitFound = false;
     
     public GameContext (List <ClientConnection> connections) {
         players = connections;
@@ -145,7 +149,7 @@ public class GameContext {
         final var id = connection.getId ();
         
         final int px = id2px.get (id), py = id2py.get (id);
-        return level.getContext ().getMap () [py][px].isExit ();
+        return exitFound = level.getContext ().getMap () [py][px].isExit ();
     }
     
 }

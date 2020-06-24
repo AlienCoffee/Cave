@@ -32,7 +32,7 @@ import ru.shemplo.cave.app.entity.level.RenderGate;
 import ru.shemplo.cave.app.entity.level.RenderTumbler;
 import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
-import ru.shemplo.cave.app.server.ServerState;
+import ru.shemplo.cave.app.server.room.state.ServerState;
 import ru.shemplo.cave.utils.IPoint;
 
 public class GameScene extends AbstractScene {
@@ -53,7 +53,7 @@ public class GameScene extends AbstractScene {
         startGame ();
     }
     
-    private ServerState serverState = ServerState.WAITIN_FOR_PLAYERS;
+    private ServerState serverState = ServerState.WAITING_FOR_PLAYERS;
     private boolean supermode = false;
     private String finishReason = "";
     private int countdown = -1;
@@ -202,7 +202,7 @@ public class GameScene extends AbstractScene {
     public void startGame () {
         final var connection = app.getConnection ();
         app.getStage ().getScene ().setOnKeyPressed (ke -> {
-            if (serverState == ServerState.WAITIN_FOR_PLAYERS && !playerReady
+            if (serverState == ServerState.WAITING_FOR_PLAYERS && !playerReady
                     && ke.getCode () == KeyCode.ENTER) {
                 app.getConnection ().sendMessage (PLAYER_READY.getValue ());
                 playerReady = true;
@@ -270,7 +270,7 @@ public class GameScene extends AbstractScene {
         ctx.setFill (Color.BLACK);
         ctx.fillRect (0, 0, cw, ch);
         
-        if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
+        if (serverState == ServerState.WAITING_FOR_PLAYERS) {
             ctx.setFill (Color.YELLOW);
             ctx.fillText ("Waiting for players: " + (countdown == -1 ? "..." : countdown), 20, 40);
             

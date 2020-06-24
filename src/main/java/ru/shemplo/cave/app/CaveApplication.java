@@ -26,10 +26,10 @@ public class CaveApplication extends Application {
         stage.getIcons ().add (LevelTextures.caveIcon);
         stage.setFullScreenExitHint ("");
         stage.setTitle ("The Cave");
-        stage.setMinWidth (600);
+        stage.setMinWidth (400);
         
-        stage.setFullScreen (true);
-        stage.setResizable (false);
+        //stage.setFullScreen (true);
+        //stage.setResizable (false);
         
         stage.setScene (makeScene (stage));
         stage.show ();

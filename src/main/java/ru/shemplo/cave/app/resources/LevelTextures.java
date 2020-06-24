@@ -16,7 +16,8 @@ public class LevelTextures {
     private static final Image tunnelL    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-l.png"));
     private static final Image tunnelRL   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lr.png"));
     private static final Image tunnelRBL  = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lrb.png"));
-    private static final Image tunnelTRBL = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lrbt.png"));
+    //private static final Image tunnelTRBL = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lrbt.png"));
+    private static final Image tunnelTRBL = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-mask-wire-2.png"));
     private static final Image tunnelT    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-t.png"));
     private static final Image tunnelB    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-b.png"));
     private static final Image tunnelTB   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-tb.png"));

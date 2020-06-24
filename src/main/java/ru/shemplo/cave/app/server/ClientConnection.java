@@ -20,6 +20,7 @@ import javax.net.ssl.SSLSocket;
 import lombok.EqualsAndHashCode;
 import lombok.Getter;
 import lombok.Setter;
+import ru.shemplo.cave.app.server.room.ServerRoom;
 import ru.shemplo.cave.utils.Utils;
 
 @EqualsAndHashCode (of = {"id", "idh"})

@@ -30,7 +30,7 @@ import ru.shemplo.cave.app.entity.ChatMessage;
 import ru.shemplo.cave.app.entity.Player;
 import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.server.ClientConnection;
-import ru.shemplo.cave.app.server.ServerState;
+import ru.shemplo.cave.app.server.room.state.ServerState;
 import ru.shemplo.cave.app.styles.SizeStyles;
 import ru.shemplo.cave.utils.EmptyFocusModel;
 import ru.shemplo.cave.utils.EmptySelectionModel;
@@ -194,7 +194,7 @@ public class GameSettingsScene extends AbstractScene {
                 backB.setDisable (!isRecruiting);
             });
             
-            if (serverState == ServerState.WAITIN_FOR_PLAYERS) {
+            if (serverState == ServerState.WAITING_FOR_PLAYERS) {
                 ApplicationScene.GAME.show (app);
             }
         } else if (CHAT_MESSAGE.getValue ().equals (parts [1])) {
@@ -317,6 +317,7 @@ public class GameSettingsScene extends AbstractScene {
         
         readyB.setPrefWidth (SizeStyles.MAIN_MENU_BUTTONS_WIDTH);
         menuBox.getChildren ().add (readyB);
+        readyB.setFocusTraversable (false);
         readyB.setOnAction (ae -> {
             readyB.setDisable (true);
             Optional.ofNullable (app.getConnection ()).ifPresent (connection -> {

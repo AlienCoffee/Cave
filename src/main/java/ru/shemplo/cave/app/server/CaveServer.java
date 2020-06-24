@@ -10,6 +10,8 @@ import javax.net.ssl.SSLServerSocket;
 import javax.net.ssl.SSLServerSocketFactory;
 import javax.net.ssl.SSLSocket;
 
+import ru.shemplo.cave.app.server.room.state.ServerState;
+
 public class CaveServer implements Closeable {
     
     public static final String SERVER_SALT = String.valueOf (new Random ().nextInt ());
@@ -17,6 +19,9 @@ public class CaveServer implements Closeable {
     
     public static void main (String ... args) throws IOException, InterruptedException {
         System.setProperty ("javax.net.ssl.keyStore", "server.jks");
+        for (final var state : ServerState.values ()) {
+            state.name ();
+        }
         
         @SuppressWarnings ("resource")
         final var server = new CaveServer ();
@@ -30,6 +35,7 @@ public class CaveServer implements Closeable {
     private Thread acceptor;
     
     public void open (int port) throws IOException {
+        ServerState.initialize ();
         pool.open ();
         
         final var factory = SSLServerSocketFactory.getDefault ();
