@@ -16,8 +16,7 @@ public class LevelTextures {
     private static final Image tunnelL    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-l.png"));
     private static final Image tunnelRL   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lr.png"));
     private static final Image tunnelRBL  = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lrb.png"));
-    //private static final Image tunnelTRBL = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lrbt.png"));
-    private static final Image tunnelTRBL = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-mask-wire-2.png"));
+    private static final Image tunnelTRBL = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lrbt.png"));
     private static final Image tunnelT    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-t.png"));
     private static final Image tunnelB    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-b.png"));
     private static final Image tunnelTB   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-tb.png"));
@@ -28,7 +27,8 @@ public class LevelTextures {
     private static final Image tunnelTR   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-rt.png"));
     private static final Image tunnelBL   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-lb.png"));
     private static final Image tunnelRB   = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-rb.png"));
-    private static final Image tunnel0    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-0.png"));
+    //private static final Image tunnel0    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-0.png"));
+    private static final Image tunnel0    = new Image (Level.class.getResourceAsStream ("/gfx/tunnel-mask-wire-4.png"));
     
     public static final Image decorationSkull      = new Image (Level.class.getResourceAsStream ("/gfx/skull.png"));
     public static final Image decorationGoldPieces = new Image (Level.class.getResourceAsStream ("/gfx/gold-pieces.png"));
