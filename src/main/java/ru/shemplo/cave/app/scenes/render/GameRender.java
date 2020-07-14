@@ -106,7 +106,6 @@ public class GameRender {
             }
         };
         
-        System.out.println (tumblers.size () + " " + tumblers); // SYSOUT
         for (final var tumbler : tumblers) {
             final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
             ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);

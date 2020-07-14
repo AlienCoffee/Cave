@@ -1,1 +1,1 @@
-java -Djavax.net.ssl.keyStorePassword=cavegame -cp ~/cave/cave-0.0.8.jar ru.shemplo.cave.app.server.CaveServer
+java -Djavax.net.ssl.keyStorePassword=cavegame -cp ~/cave/cave-0.0.10.jar ru.shemplo.cave.app.server.CaveServer
