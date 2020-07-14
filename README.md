@@ -8,7 +8,7 @@
 
 Compiled versions of server and client on [google drive](https://drive.google.com/drive/folders/1HlniVBdQKjTPNwMjMdjH0uqbuJaOs1ZR?usp=sharing)
 
-> **Versions are compiled for Windows.** Due to JavaFX uses native graphics implementation in libraries, players on _Linux_ and _Mac OS_ will need to replace `<classifier>win<classifier>` to `linux` or `mac` in `pom.xml` and package project on their own. Sorry for the inconvenience.
+> **Versions are compiled for Windows.** Due to JavaFX uses native graphics implementation in libraries, players on _Linux_ and _Mac OS_ will need to replace `<classifier>win</classifier>` to `linux` or `mac` in `pom.xml` and package project on your own. Sorry for the inconvenience.
 
 Official server is hosted and run on [shemplo.ru](https://shemplo.ru).
 
