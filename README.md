@@ -4,9 +4,13 @@
 
 ### Quick start
 
+> Game requires **Java 14+**
+
 Compiled versions of server and client on [google drive](https://drive.google.com/drive/folders/1HlniVBdQKjTPNwMjMdjH0uqbuJaOs1ZR?usp=sharing)
 
-Official server is hosted and run on [shemplo.ru](https://shemplo.ru)
+> **Versions are compiled for Windows.** Due to JavaFX uses native graphics implementation in libraries, players on _Linux_ and _Mac OS_ will need to replace `<classifier>win<classifier>` to `linux` or `mac` in `pom.xml` and package project on their own. Sorry for the inconvenience.
+
+Official server is hosted and run on [shemplo.ru](https://shemplo.ru).
 
 ### Control
 
@@ -18,3 +22,10 @@ Official server is hosted and run on [shemplo.ru](https://shemplo.ru)
 
 Maze looks like a tiled field with passages on sides. Some of passages are absent at all. Some of passages can be closed with gates. 
 To open them you should find one of corrresponding tumbler and activate it. 
+
+### Search for help
+
+If you liked the idea of this game then you can help us to draw textures of tiles and decorations (and other). 
+We are intersted in improving this game but we don't have good artist for that.
+
+Coordinates for application: [@Shemplo](https://t.me/shemplo) (telegram)
