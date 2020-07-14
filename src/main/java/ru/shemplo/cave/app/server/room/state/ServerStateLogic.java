@@ -30,7 +30,6 @@ public class ServerStateLogic implements BiFunction <ServerRoomContext, Long, Pa
                 Optional.ofNullable (transition.getOnPredicate ()).ifPresent (consumer -> {
                     consumer.accept (context, time);
                 });
-                 // SYSOUT
                 Optional.ofNullable (transition.getTransition ().getLogic ().onEnable)
                     .ifPresent (consumer -> consumer.accept (context, time));
                 

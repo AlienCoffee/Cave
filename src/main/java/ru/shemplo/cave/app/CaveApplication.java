@@ -28,8 +28,8 @@ public class CaveApplication extends Application {
         stage.setTitle ("The Cave");
         stage.setMinWidth (400);
         
-        //stage.setFullScreen (true);
-        //stage.setResizable (false);
+        stage.setFullScreen (true);
+        stage.setResizable (false);
         
         stage.setScene (makeScene (stage));
         stage.show ();

@@ -28,7 +28,7 @@ public class GameContext {
         
         final var ps = connections.size ();
         
-        level = new Level (ps * 5, ps * 5, ps);
+        level = new Level (ps * 15, ps * 15, ps);
         final var levelContext = level.getContext ();
         
         int i = 0;

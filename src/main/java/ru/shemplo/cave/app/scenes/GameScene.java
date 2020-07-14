@@ -31,6 +31,7 @@ import ru.shemplo.cave.app.entity.level.RenderCell;
 import ru.shemplo.cave.app.entity.level.RenderGate;
 import ru.shemplo.cave.app.entity.level.RenderTumbler;
 import ru.shemplo.cave.app.resources.LevelTextures;
+import ru.shemplo.cave.app.scenes.render.GameRender;
 import ru.shemplo.cave.app.server.ClientConnection;
 import ru.shemplo.cave.app.server.room.state.ServerState;
 import ru.shemplo.cave.utils.IPoint;
@@ -39,6 +40,7 @@ public class GameScene extends AbstractScene {
     
     private final Canvas canvasC = new Canvas ();
     private final GraphicsContext ctx = canvasC.getGraphicsContext2D ();
+    private final GameRender render = new GameRender (canvasC);
     
     private final TextField chatTF = new TextField ();
     
@@ -84,7 +86,7 @@ public class GameScene extends AbstractScene {
                     final var isExit = Boolean.parseBoolean (cd [3]);
                     
                     return RenderCell.builder ().x (dx).y (dy).image (image)
-                         . exit (isExit).build ();
+                         . exit (isExit).symbol (cs).build ();
                 }).collect (Collectors.toList ());
             
             final var gates = Arrays.stream (parts [5].split ("@"))
@@ -92,7 +94,7 @@ public class GameScene extends AbstractScene {
                 . map (str -> str.split (",")).map (cd -> {
                     final var dx = Double.parseDouble (cd [0]);
                     final var dy = Double.parseDouble (cd [1]);
-                    final var isVertical = Boolean.parseBoolean (cd [2]);
+                    final var isVertical = !Boolean.parseBoolean (cd [2]);
                     final var type = GateType.valueOf (cd [3]);
                     final var isClosed = Boolean.parseBoolean (cd [4]);
                     
@@ -175,7 +177,7 @@ public class GameScene extends AbstractScene {
         canvasC.widthProperty ().bind (canvasBox.widthProperty ());
         canvasStack.getChildren ().add (canvasC);
         
-        chatTF.setPromptText ("Type message here");
+        chatTF.setPromptText ("Type chat message here");
         chatTF.setFocusTraversable (false);
         chatTF.setOnKeyReleased (ke -> {
             final var text = chatTF.getText ();
@@ -248,8 +250,6 @@ public class GameScene extends AbstractScene {
         new KeyFrame (Duration.millis (1000.0 / 10.0))
     );
     
-    private final double ts = 32 * 6; // tile size 
-    
     @SuppressWarnings ("unused")
     private List <Color> subpartColors = List.of (
         Color.RED, Color.BLUE, Color.GREEN, Color.BLUEVIOLET, Color.YELLOW, Color.CYAN,
@@ -265,10 +265,11 @@ public class GameScene extends AbstractScene {
     
     private void render () {
         final double cw = canvasC.getWidth (), ch =  canvasC.getHeight ();
-        final double cx = cw / 2, cy =  ch / 2;
         
-        ctx.setFill (Color.BLACK);
-        ctx.fillRect (0, 0, cw, ch);
+        if (serverState != ServerState.GAME) {
+            ctx.setFill (Color.BLACK);
+            ctx.fillRect (0, 0, cw, ch);
+        }
         
         if (serverState == ServerState.WAITING_FOR_PLAYERS) {
             ctx.setFill (Color.YELLOW);
@@ -282,82 +283,12 @@ public class GameScene extends AbstractScene {
             ctx.fillText ("Task: found the exit from the cave until expedition time is over", 20, 115);
             ctx.fillText ("To start the expedition type <Enter> key", 20, 130);
         } else if (serverState == ServerState.GAME) {
-            synchronized (lock) {                
-                visibleCells.forEach (cell -> {
-                    ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts + 1, ts + 1);
-                    /*
-                    ctx.drawImage (LevelTextures.decorationGoldPieces, cx + (cell.getX () - 0.5) * ts + 40, 
-                            cy + (cell.getY () - 0.5) * ts + 40, 24, 24);
-                            */
-                    
-                    if (cell.isExit ()) {
-                        ctx.setFill (Color.WHITESMOKE);
-                        ctx.fillRect (cx + cell.getX () * ts - 20, cy + cell.getY () * ts - 20, 40, 40);
-                        
-                        if (cell.getX () == 0 && cell.getY () == 0) { // player stays on this cell
-                            ctx.setFill (Color.SANDYBROWN);
-                            ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
-                        }
-                    }
-                });
-                
-                visibleGates.forEach (gate -> {
-                    ctx.setFill (gate.getType () == GateType.GATE 
-                            ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
-                                    : (gate.getType () == GateType.SLIT ? Color.ALICEBLUE : Color.BLACK)
-                            );
-                    if (gate.isVertical ()) {
-                        if (gate.getType () == GateType.GATE) {   
-                            final var gatesSkin = gate.isClosed () ? LevelTextures.gatesClosedV : LevelTextures.gatesOpenedV;
-                            //ctx.fillRect (cx + gate.getX () * ts - 5, cy + gate.getY () * ts - ts / 4, 10, ts / 2);
-                            ctx.drawImage (gatesSkin, cx + gate.getX () * ts - 15, cy + gate.getY () * ts - ts / 4, 30, ts / 2);
-                        } else {
-                            final var slitSkin = LevelTextures.gatesClosedV;
-                            ctx.drawImage (slitSkin, cx + gate.getX () * ts - 15, cy + gate.getY () * ts - ts / 4, 30, ts / 2);
-                        }
-                    } else {
-                        if (gate.getType () == GateType.GATE) {
-                            final var gatesSkin = gate.isClosed () ? LevelTextures.gatesClosedH : LevelTextures.gatesOpenedH;
-                            //ctx.fillRect (cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 5, ts / 2, 10);
-                            ctx.drawImage (gatesSkin, cx + gate.getX () * ts - ts / 4 - 4, cy + gate.getY () * ts - 15, ts / 2, 30);
-                        } else {
-                            final var slitSkin = LevelTextures.slitH;
-                            ctx.drawImage (slitSkin, cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 15, ts / 2, 30);
-                        }
-                    }
-                });
-                
-                visibleTumblers.forEach (tumbler -> {
-                    final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
-                    ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
-                    
-                    final var fx = cx + (tumbler.getX () - 0.5) * ts + 35;
-                    final var fy = cy + (tumbler.getY () - 0.5) * ts + 15;
-                    
-                    ctx.fillRect (fx + 1, fy + 1, 13, 13);
-                    ctx.drawImage (tumblerSkin, fx, fy, 15, 15);
-                });
-                
-                final var playerSkin = LevelTextures.player;
-                visiblePlayers.forEach (player -> {
-                    ctx.drawImage (playerSkin, cx + player.X * ts - 10, cy + player.Y * ts - 20, 20, 40);
-                });
-                
-                ctx.drawImage (playerSkin, cx - 10, cy - 20, 20, 40);
-                
-                visibleCells.forEach (cell -> {
-                    if (cell.isExit () && cell.getX () == 0 && cell.getY () == 0) { // player stays on exit cell
-                        ctx.setFill (Color.SANDYBROWN);
-                        ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
-                    }
-                });
+            synchronized (lock) {
+                render.render (
+                    visibleCells, visibleGates, visibleTumblers, visiblePlayers, 
+                    mx, my, countdown, supermode
+                );
             }
-            
-            ctx.setFill (Color.YELLOW);
-            ctx.fillText ("X: " + mx, 20, 40);
-            ctx.fillText ("Y: " + my, 20, 55);
-            ctx.fillText (String.format ("Rest time: %02d:%02d", countdown / 60, countdown % 60), 20, 70);
-            ctx.fillText ("Supermode: " + supermode, 20, 85);
         } else if (serverState == ServerState.FINISH) {
             ctx.setFill (Color.YELLOW);
             ctx.fillText (finishReason, 20, 40);

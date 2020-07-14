@@ -7,7 +7,9 @@ import javafx.scene.Scene;
 import javafx.scene.canvas.Canvas;
 import javafx.scene.layout.BorderPane;
 import javafx.stage.Stage;
+import ru.shemplo.cave.app.entity.level.GateType;
 import ru.shemplo.cave.app.entity.level.RenderCell;
+import ru.shemplo.cave.app.entity.level.RenderGate;
 import ru.shemplo.cave.app.entity.level.RenderTumbler;
 import ru.shemplo.cave.app.resources.LevelTextures;
 import ru.shemplo.cave.app.scenes.render.GameRender;
@@ -33,6 +35,7 @@ public class PreviewRender extends Application {
         final var scene = new Scene (root);
         stage.setScene (scene);
         
+        stage.getIcons ().add (LevelTextures.caveIcon);
         stage.setTitle ("Render preview");
         stage.show ();
         
@@ -54,14 +57,17 @@ public class PreviewRender extends Application {
     }
     
     private void doPreviewRender () {
-        final var lock = new Object ();
-        
         final var cells = List.of (
-            RenderCell.builder ().x (0).y (0).image (LevelTextures.symbol2texture.get (' ')).build (),
-            RenderCell.builder ().x (1).y (0).image (LevelTextures.symbol2texture.get (' ')).build (),
-            RenderCell.builder ().x (1).y (-1).image (LevelTextures.symbol2texture.get ('┬')).build (),
-            RenderCell.builder ().x (2).y (0).image (LevelTextures.symbol2texture.get (' ')).exit (true).build (),
-            RenderCell.builder ().x (-1).y (0).image (LevelTextures.symbol2texture.get (' ')).build ()
+            RenderCell.builder ().x (0).y (0).symbol ('├').build (),
+            RenderCell.builder ().x (1).y (0).symbol ('┴').exit (true).build (),
+            RenderCell.builder ().x (-1).y (0).symbol ('│').build ()
+        );
+        
+        final var gates = List.of (
+            RenderGate.builder ().x (0.5).y (0).vertical (false).type (GateType.GATE).closed (true).build (),
+            RenderGate.builder ().x (-0.5).y (0).vertical (false).type (GateType.GATE).closed (false).build (),
+            RenderGate.builder ().x (0).y (0.5).vertical (true).type (GateType.GATE).closed (true).build (),
+            RenderGate.builder ().x (0).y (-0.5).vertical (true).type (GateType.GATE).closed (false).build ()
         );
         
         final var tumblers = List.of (
@@ -69,7 +75,7 @@ public class PreviewRender extends Application {
             RenderTumbler.builder ().x (2).y (0).active (true).build ()
         );
         
-        render.render (cells, List.of (), tumblers, List.of (), 0, 0, 0, false, lock);
+        render.render (cells, gates, tumblers, List.of (), 0, 0, 0, false);
     }
     
 }

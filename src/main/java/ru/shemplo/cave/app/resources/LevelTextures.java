@@ -66,13 +66,17 @@ public class LevelTextures {
     public static final Image player;
     
 
+    public static final Image passage = new Image (Level.class.getResourceAsStream ("/gfx/passage-2.png"));
+    public static final Image ladder = new Image (Level.class.getResourceAsStream ("/gfx/ladder.png"));
     public static final Image slitV = new Image (Level.class.getResourceAsStream ("/gfx/slit-tb.png"));
     public static final Image slitH;
     
     public static final Image gatesOpenedV = new Image (Level.class.getResourceAsStream ("/gfx/gates-open-v.png"));
+    public static final Image gatesOpened = new Image (Level.class.getResourceAsStream ("/gfx/gates-open-2.png"));
     public static final Image gatesOpenedH;
     
     public static final Image gatesClosedV = new Image (Level.class.getResourceAsStream ("/gfx/gates-closed-v.png"));
+    public static final Image gatesClosed = new Image (Level.class.getResourceAsStream ("/gfx/gates-closed-2.png"));
     public static final Image gatesClosedH;
     
     static {

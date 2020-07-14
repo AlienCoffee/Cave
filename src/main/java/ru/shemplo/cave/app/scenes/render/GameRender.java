@@ -19,7 +19,7 @@ public class GameRender {
     private final Canvas canvas;
     private GraphicsContext ctx;
     
-    private double ts = 32 * 6; // tile size 
+    private double ts = 32.0 * 6; // tile size 
     
     public void setScale (double scale) {
         ts = Math.max (4.0, 32 * scale);
@@ -27,8 +27,7 @@ public class GameRender {
     
     public void render (
         List <RenderCell> cells, List <RenderGate> gates, List <RenderTumbler> tumblers, 
-        List <IPoint> players, int mx, int my, int countdown, boolean supermode, 
-        Object lock
+        List <IPoint> players, int mx, int my, int countdown, boolean supermode
     ) {
         final double cw = canvas.getWidth (), ch =  canvas.getHeight ();
         final double cx = cw / 2, cy =  ch / 2;
@@ -40,70 +39,98 @@ public class GameRender {
         ctx.setFill (Color.BLACK);
         ctx.fillRect (0, 0, cw, ch);
         
-        synchronized (lock) {                
-            cells.forEach (cell -> {
-                ctx.drawImage (cell.getImage (), cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts, ts);
-                
-                if (cell.isExit ()) {
-                    ctx.setFill (Color.WHITESMOKE);
-                    ctx.fillRect (cx + cell.getX () * ts - 20, cy + cell.getY () * ts - 20, 40, 40);
-                    
-                    if (cell.getX () == 0 && cell.getY () == 0) { // player stays on this cell
-                        ctx.setFill (Color.SANDYBROWN);
-                        ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
-                    }
-                }
-            });
+        for (final var cell : cells) {
+            final var cellSkin = LevelTextures.symbol2texture.get (' ');
+            ctx.drawImage (cellSkin, cx + (cell.getX () - 0.5) * ts, cy + (cell.getY () - 0.5) * ts, ts, ts);
+            final var passageSkin = LevelTextures.passage;
             
-            gates.forEach (gate -> {
-                ctx.setFill (gate.getType () == GateType.GATE 
-                        ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
-                                : (gate.getType () == GateType.SLIT ? Color.ALICEBLUE : Color.BLACK)
-                        );
+            if (cell.hasTopPassage ()) {
+                final var px = cx + cell.getX () * ts - ts / 10;
+                final var py = cy + (cell.getY () - 0.5) * ts - 2 - ts / 25.0 * 0;
+                ctx.drawImage (passageSkin, px, py + 2, ts / 5, ts / 5);
+            }
+            
+            if (cell.hasRightPassage ()) {
+                final var px =  cy + cell.getY () * ts - ts / 10;
+                final var py = -cx - (cell.getX () + 0.5) * ts + ts / 15 * 0 - 2;
+                
+                ctx.rotate (90);
+                ctx.drawImage (passageSkin, px, py + 2, ts / 5, ts / 5);
+                ctx.rotate (-90);
+            }
+            
+            if (cell.hasBottomPassage ()) {
+                final var px = cx + cell.getX () * ts + ts / 10;
+                final var py = cy + (cell.getY () + 0.5) * ts - ts / 15 * 0 + 2;
+                
+                ctx.rotate (180);
+                ctx.drawImage (passageSkin, -px, -py + 2, ts / 5, ts / 5);
+                ctx.rotate (-180);
+            }
+            
+            if (cell.hasLeftPassage ()) {
+                final var px =  cy + cell.getY () * ts + ts / 10;
+                final var py = -cx - (cell.getX () - 0.5) * ts - ts / 15 * 0 + 2;
+                
+                ctx.rotate (-90);
+                ctx.drawImage (passageSkin, -px, -py + 2, ts / 5, ts / 5);
+                ctx.rotate (90);
+            }
+            
+            if (cell.isExit ()) {
+                ctx.setFill (Color.WHITESMOKE);
+                ctx.drawImage (LevelTextures.ladder, cx + cell.getX () * ts - 20, cy + cell.getY () * ts - 20, 40, 40);
+            }
+        };
+        
+        for (final var gate : gates) {
+            ctx.setFill (gate.getType () == GateType.GATE 
+                    ? (gate.isClosed () ? Color.BROWN : Color.LIMEGREEN) 
+                            : (gate.getType () == GateType.SLIT ? Color.ALICEBLUE : Color.BLACK)
+                    );
+            
+            if (gate.getType () == GateType.GATE) {
+                final var gateSkin = gate.isClosed () ? LevelTextures.gatesClosedH : LevelTextures.gatesOpenedH;
                 if (gate.isVertical ()) {
-                    if (gate.getType () == GateType.GATE) {   
-                        final var gatesSkin = gate.isClosed () ? LevelTextures.gatesClosedV : LevelTextures.gatesOpenedV;
-                        ctx.drawImage (gatesSkin, cx + gate.getX () * ts - 15, cy + gate.getY () * ts - ts / 4, 30, ts / 2);
-                    } else {
-                        final var slitSkin = LevelTextures.gatesClosedV;
-                        ctx.drawImage (slitSkin, cx + gate.getX () * ts - 15, cy + gate.getY () * ts - ts / 4, 30, ts / 2);
-                    }
+                    final var px = cx + gate.getX () * ts - ts / 7;
+                    final var py = cy + gate.getY () * ts - ts / 24;
+                    ctx.drawImage (gateSkin, px, py, ts / 4, ts / 12);
                 } else {
-                    if (gate.getType () == GateType.GATE) {
-                        final var gatesSkin = gate.isClosed () ? LevelTextures.gatesClosedH : LevelTextures.gatesOpenedH;
-                        ctx.drawImage (gatesSkin, cx + gate.getX () * ts - ts / 4 - 4, cy + gate.getY () * ts - 15, ts / 2, 30);
-                    } else {
-                        final var slitSkin = LevelTextures.slitH;
-                        ctx.drawImage (slitSkin, cx + gate.getX () * ts - ts / 4, cy + gate.getY () * ts - 15, ts / 2, 30);
-                    }
+                    final var px =  cy + gate.getY () * ts - ts / 7;
+                    final var py = -cx - gate.getX () * ts - ts / 24;
+                    
+                    ctx.rotate (90);
+                    ctx.drawImage (gateSkin, px, py, ts / 4, ts / 12);
+                    ctx.rotate (-90);
                 }
-            });
+            }
+        };
+        
+        System.out.println (tumblers.size () + " " + tumblers); // SYSOUT
+        for (final var tumbler : tumblers) {
+            final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
+            ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
             
-            tumblers.forEach (tumbler -> {
-                final var tumblerSkin = tumbler.isActive () ? LevelTextures.tumblerOn : LevelTextures.tumblerOff;
-                ctx.setFill (tumbler.isActive () ? Color.LIMEGREEN : Color.BROWN);
-                
-                final var fx = cx + (tumbler.getX () - 0.5) * ts + 35;
-                final var fy = cy + (tumbler.getY () - 0.5) * ts + 7;
-                
-                ctx.fillRect (fx + 1, fy + 1, 13, 13);
-                ctx.drawImage (tumblerSkin, fx, fy, 15, 15);
-            });
+            final var fx = cx + (tumbler.getX () - 0.5) * ts + ts / 4 + 4;
+            final var fy = cy + (tumbler.getY () - 0.5) * ts + ts / 10;
             
-            final var playerSkin = LevelTextures.player;
-            players.forEach (player -> {
-                ctx.drawImage (playerSkin, cx + player.X * ts - 10, cy + player.Y * ts - 20, 20, 40);
-            });
-            
-            ctx.drawImage (playerSkin, cx - 10, cy - 20, 20, 40);
-            
-            cells.forEach (cell -> {
-                if (cell.isExit () && cell.getX () == 0 && cell.getY () == 0) { // player stays on exit cell
-                    ctx.setFill (Color.SANDYBROWN);
-                    ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
-                }
-            });
+            ctx.fillRect (fx + 1, fy + 1, 13, 8);
+            ctx.drawImage (tumblerSkin, fx, fy, 15, 10);
+        };
+        
+        final var playerSkin = LevelTextures.player;
+        for (final var player : players) {            
+            ctx.drawImage (playerSkin, cx + player.X * ts - ts / 32, cy + player.Y * ts - ts / 16, ts / 16, ts / 8);
         }
+        
+        ctx.drawImage (playerSkin, cx - ts / 32, cy - ts / 16, ts / 16, ts / 8);
+        
+        for (final var cell : cells) {
+            if (cell.isExit () && cell.getX () == 0 && cell.getY () == 0) { // player stays on exit cell
+                ctx.setFill (Color.SANDYBROWN);
+                ctx.fillText ("Exit is found! Press <E> to finish the expedition", 20, 100);
+            }
+        };
         
         ctx.setFill (Color.YELLOW);
         ctx.fillText ("X: " + mx, 20, 40);
